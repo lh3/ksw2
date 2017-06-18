@@ -57,10 +57,10 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 			int8_t z = s[t] + qe2;
 			int8_t a = x1   + v1;
 			int8_t b = y[t] + u[t];
-			d = z >= a? 0 : 1;
-			z = z >= a? z : a;
-			d = z >= b? d : 2;
-			z = z >= b? z : b;
+			d = a > z? 1 : 0; // d = z >= a? 0 : 1
+			z = a > z? a : z;
+			d = b > z? 2 : d;
+			z = b > z? b : z;
 			u1 = u[t];              // u1   = u(r-1,t) (temporary variable)
 			u[t] = z - v1;          // u[t] = u(r,t)
 			v1 = v[t];              // v1   = v(r-1,t) (set for the next iteration)

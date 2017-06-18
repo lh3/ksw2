@@ -81,19 +81,18 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			ut = _mm_loadu_si128((__m128i*)&u[t]);           // ut <- u[t..t+15]
 			b = _mm_add_epi8(_mm_loadu_si128((__m128i*)&y[t]), ut); // b <- y[r-1][t..t+15] + u[r-1][t..t+15]
 
-			d = _mm_and_si128(flag1_, _mm_cmplt_epi8(a, z)); // d = a < z? 1 : 0
+			d = _mm_and_si128(_mm_cmpgt_epi8(a, z), flag1_); // d = a > z? 1 : 0
 #ifdef __SSE4_1__
 			z = _mm_max_epi8(z, a);                          // z = z > a? z : a (signed)
-			tmp = _mm_cmplt_epi8(b, z);
-			d = _mm_blendv_epi8(d, flag2_, tmp);             // d = b < z? d : 2
-#else
+			tmp = _mm_cmpgt_epi8(b, z);
+			d = _mm_blendv_epi8(d, flag2_, tmp);             // d = b > z? 2 : d
+#else // we need to emulate SSE4.1 intrinsics _mm_max_epi8() and _mm_blendv_epi8()
 			z = _mm_and_si128(z, _mm_cmpgt_epi8(z, zero_));  // z = z > 0? z : 0;
 			z = _mm_max_epu8(z, a);                          // z = max(z, a); this works because both are non-negative
-			tmp = _mm_cmplt_epi8(b, z);
-			d = _mm_or_si128(_mm_andnot_si128(tmp, d), _mm_and_si128(tmp, flag2_));
+			tmp = _mm_cmpgt_epi8(b, z);
+			d = _mm_or_si128(_mm_andnot_si128(tmp, d), _mm_and_si128(tmp, flag2_)); // d = b > z? 2 : d; emulating blendv
 #endif
 			z = _mm_max_epu8(z, b);                          // z = max(z, b); this works because both are non-negative
-
 			_mm_storeu_si128((__m128i*)&u[t], _mm_sub_epi8(z, vt1)); // u[r][t..t+15] <- z - v[r-1][t-1..t+14]
 			_mm_storeu_si128((__m128i*)&v[t], _mm_sub_epi8(z, ut));  // v[r][t..t+15] <- z - u[r-1][t..t+15]
 
@@ -108,6 +107,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			_mm_storeu_si128((__m128i*)&y[t], _mm_and_si128(b, tmp));
 			_mm_storeu_si128((__m128i*)&pr[t - st], d);
 		}
+		// for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, u[t], v[t], x[t], y[t], pr[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
 	{ // backtrack
