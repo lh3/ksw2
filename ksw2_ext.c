@@ -20,9 +20,9 @@ int ksw_ext(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 	}
 
 	// fill the first row
-	eh[0].h = h0, eh[0].e = h0 - gapoe - gapoe > 0? h0 - gapoe - gapoe : 0; // FIXME: this is not quite right!
+	eh[0].h = h0, eh[0].e = h0 - gapoe - gapo > 0? h0 - gapoe - gapo : 0;
 	for (j = 1; j <= qlen && j <= w; ++j) {
-		eh[j].h = -(gapo + gape * j), eh[j].e = eh[j-1].e - gape;
+		eh[j].h = h0 - (gapo + gape * j), eh[j].e = h0 - (gapoe + gapo + gape * j);
 		if (eh[j].e < 0) eh[j].e = 0;
 		if (eh[j].h < 0) {
 			eh[j].h = 0;
@@ -49,8 +49,10 @@ int ksw_ext(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 		if (en > max_j0 + w + 1) en = max_j0 + w + 1;
 		// compute the first column
 		if (st == 0) {
-			h1 = h0 - (gapo + gape * (i + 1));
+			h1 = h0 - (gapo + gape * i);
 			if (h1 < 0) h1 = 0;
+			f = h0 - (gapoe + gapo + gape * i);
+			if (f < 0) f = 0;
 		} else h1 = 0;
 		for (j = st; j < en; ++j) {
 			// At the beginning of the loop: eh[j] = { H(i-1,j-1), E(i,j) }, f = F(i,j) and h1 = H(i,j-1)
