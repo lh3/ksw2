@@ -7,6 +7,7 @@
 
 #define KSW_EZ_NO_CIGAR   0x1
 #define KSW_EZ_RIGHT      0x2
+#define KSW_EZ_SIMPLE_SC  0x4 // match/mismatch only; last symbol is a wildcard
 
 typedef struct {
 	int max, max_q, max_t; // max extension score and coordinate

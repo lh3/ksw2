@@ -36,7 +36,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	int8_t *u, *v, *x, *y, *s;
 	int32_t *H;
 	uint8_t *p = 0, *qr, *sf, *mem;
-	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
+	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_, sc_mch_, sc_mis_, m1_;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
@@ -45,6 +45,9 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	flag2_  = _mm_set1_epi8(2<<0);
 	flag4_  = _mm_set1_epi8(1<<2);
 	flag32_ = _mm_set1_epi8(2<<4);
+	sc_mch_ = _mm_set1_epi8(mat[0]);
+	sc_mis_ = _mm_set1_epi8(mat[1]);
+	m1_     = _mm_set1_epi8(m - 1); // wildcard
 
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
 	ez->max = ez->mqe = ez->mte = KSW_NEG_INF;
@@ -89,8 +92,26 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			if (r < en + en - w - 1) y[en] = u[en] = 0; // (r-1,en) out of the band; TODO: is this line necessary?
 		} else y[r] = 0, u[r] = r? q : 0;
 		// loop fission: set scores first
-		for (t = st; t <= en; ++t)
-			s[t] = mat[sf[t] * m + qrr[t]];
+
+		if (flag & KSW_EZ_SIMPLE_SC) {
+			for (t = st; t <= en; t += 16) {
+				__m128i sq, st, tmp, mask;
+				sq = _mm_loadu_si128((__m128i*)&sf[t]);
+				st = _mm_loadu_si128((__m128i*)&qrr[t]);
+				mask = _mm_or_si128(_mm_cmpeq_epi8(sq, m1_), _mm_cmpeq_epi8(st, m1_));
+				tmp = _mm_cmpeq_epi8(sq, st);
+#ifdef __SSE4_1__
+				tmp = _mm_blendv_epi8(sc_mis_, sc_mch_, tmp);
+#else
+				tmp = _mm_or_si128(_mm_andnot_si128(tmp, sc_mis_), _mm_and_si128(tmp, sc_mch_));
+#endif
+				tmp = _mm_andnot_si128(mask, tmp);
+				_mm_storeu_si128((__m128i*)&s[t], tmp);
+			}
+		} else {
+			for (t = st; t <= en; ++t)
+				s[t] = mat[sf[t] * m + qrr[t]];
+		}
 		// core loop
 		x1_ = _mm_cvtsi32_si128(x1);
 		v1_ = _mm_cvtsi32_si128(v1);
