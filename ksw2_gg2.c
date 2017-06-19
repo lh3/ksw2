@@ -77,42 +77,8 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 		}
 	}
 	kfree(km, u); kfree(km, v); kfree(km, x); kfree(km, y); kfree(km, s); kfree(km, qr);
-	{ // backtrack
-		int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i, j, k, l;
-		uint32_t *cigar = 0, tmp;
-		i = tlen - 1, j = qlen - 1;
-		while (i >= 0 && j >= 0) {
-			r = i + j;
-			tmp = p[r * n_col + i - off[r]];
-			which = tmp >> (which << 1) & 3;
-			if (which == 0 && tmp>>6) break;
-			if (which == 0) which = tmp & 3;
-			if (which == 0)      cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
-			else if (which == 1) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i;      // deletion
-			else                 cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j;      // insertion
-		}
-		if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
-		if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
-		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
-			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
-		*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
-
-		// compute score
-		for (k = 0, score = 0, i = j = 0; k < n_cigar; ++k) {
-			int op = cigar[k] & 0xf, len = cigar[k] >> 4;
-			if (op == 0) {
-				for (l = 0; l < len; ++l)
-					score += mat[target[i + l] * m + query[j + l]];
-				i += len, j += len;
-			} else if (op == 1) {
-				score -= q + len * e;
-				j += len;
-			} else if (op == 2) {
-				score -= q + len * e;
-				i += len;
-			}
-		}
-	}
+	ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
+	score = ksw_cigar2score(m, mat, q, e, query, target, *n_cigar_, *cigar_);
 	kfree(km, p); kfree(km, off);
 	return score;
 }

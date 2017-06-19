@@ -58,9 +58,9 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 }
 #endif
 
-/********************************
- * Private macros and functions *
- ********************************/
+/************************************
+ *** Private macros and functions ***
+ ************************************/
 
 #ifdef HAVE_KALLOC
 #include "kalloc.h"
@@ -82,6 +82,47 @@ static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar, uin
 		cigar[(*n_cigar)++] = len<<4 | op;
 	} else cigar[(*n_cigar)-1] += len<<4;
 	return cigar;
+}
+
+static inline void ksw_backtrack(void *km, int is_rot, const uint8_t *p, const int *off, int n_col, int i0, int j0, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
+{
+	int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i = i0, j = j0, r;
+	uint32_t *cigar = *cigar_, tmp;
+	while (i >= 0 && j >= 0) {
+		if (is_rot) r = i + j, tmp = p[r * n_col + i - off[r]];
+		else tmp = p[i * n_col + j - off[i]];
+		which = tmp >> (which << 1) & 3;
+		if (which == 0 && tmp>>6) break;
+		if (which == 0) which = tmp & 3;
+		if (which == 0)      cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
+		else if (which == 1) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i;      // deletion
+		else                 cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j;      // insertion
+	}
+	if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
+	if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
+	for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
+		tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
+	*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
+}
+
+static inline int ksw_cigar2score(int8_t m, const int8_t *mat, int8_t q, int8_t e, const uint8_t *query, const uint8_t *target, int n_cigar, const uint32_t *cigar)
+{
+	int i, j, k, l, score;
+	for (k = 0, score = 0, i = j = 0; k < n_cigar; ++k) {
+		int op = cigar[k] & 0xf, len = cigar[k] >> 4;
+		if (op == 0) {
+			for (l = 0; l < len; ++l)
+				score += mat[target[i + l] * m + query[j + l]];
+			i += len, j += len;
+		} else if (op == 1) {
+			score -= q + len * e;
+			j += len;
+		} else if (op == 2) {
+			score -= q + len * e;
+			i += len;
+		}
+	}
+	return score;
 }
 
 #endif

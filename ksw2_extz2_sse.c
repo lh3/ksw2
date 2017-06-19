@@ -192,24 +192,8 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	}
 	kfree(km, mem); kfree(km, qr);
 	if (with_cigar) { // backtrack
-		int which = 0, i, j;
-		uint32_t tmp;
-		if (ez->score > KSW_NEG_INF) i = tlen - 1, j = qlen - 1;
-		else i = ez->max_t, j = ez->max_q;
-		while (i >= 0 && j >= 0) {
-			r = i + j;
-			tmp = p[r * n_col + i - off[r]];
-			which = tmp >> (which << 1) & 3;
-			if (which == 0 && tmp>>6) break;
-			if (which == 0) which = tmp & 3;
-			if (which == 0)      ez->cigar = ksw_push_cigar(km, &ez->n_cigar, &ez->m_cigar, ez->cigar, 0, 1), --i, --j; // match
-			else if (which == 1) ez->cigar = ksw_push_cigar(km, &ez->n_cigar, &ez->m_cigar, ez->cigar, 2, 1), --i;      // deletion
-			else                 ez->cigar = ksw_push_cigar(km, &ez->n_cigar, &ez->m_cigar, ez->cigar, 1, 1), --j;      // insertion
-		}
-		if (i >= 0) ez->cigar = ksw_push_cigar(km, &ez->n_cigar, &ez->m_cigar, ez->cigar, 2, i + 1); // first deletion
-		if (j >= 0) ez->cigar = ksw_push_cigar(km, &ez->n_cigar, &ez->m_cigar, ez->cigar, 1, j + 1); // first insertion
-		for (i = 0; i < ez->n_cigar>>1; ++i) // reverse CIGAR
-			tmp = ez->cigar[i], ez->cigar[i] = ez->cigar[ez->n_cigar-1-i], ez->cigar[ez->n_cigar-1-i] = tmp;
+		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+		else ksw_backtrack(km, 1, p, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 	}
 	kfree(km, p); kfree(km, off); kfree(km, H);
 }

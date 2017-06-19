@@ -100,28 +100,9 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 
 	// backtrack
 	score = eh[qlen].h;
-	if (m_cigar_ && n_cigar_ && cigar_) {
-		int n_cigar = 0, m_cigar = *m_cigar_, which = 0;
-		uint32_t *cigar = 0, tmp;
-		i = tlen - 1, k = last_en - 1; // (i,k) points to the last cell; FIXME: with a moving band, we need to take care of last deletion/insertion!!!
-		while (i >= 0 && k >= 0) {
-			tmp = z[i * n_col + k - off[i]];
-			which = tmp >> (which << 1) & 3;
-			if (which == 0 && tmp>>6) break;
-			if (which == 0) which = tmp & 3;
-			if (which == 0)      cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --k; // match
-			else if (which == 1) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i;      // deletion
-			else                 cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --k;      // insertion
-		}
-		if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
-		if (k >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, k + 1); // first insertion
-		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
-			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
-		*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
-	}
-
 	kfree(km, qp); kfree(km, eh);
-	if (n_cigar_ && cigar_) {
+	if (m_cigar_ && n_cigar_ && cigar_) {
+		ksw_backtrack(km, 0, z, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
 		kfree(km, z);
 		kfree(km, off);
 	}
