@@ -32,7 +32,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	a = _mm_sub_epi8(a, z); \
 	b = _mm_sub_epi8(b, z);
 
-	int r, t, qe = q + e, n_col, *off = 0, tlen16, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
+	int r, t, qe = q + e, n_col, *off = 0, tlen16, qlen16, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
 	int8_t *u, *v, *x, *y, *s;
 	int32_t *H;
 	uint8_t *p = 0, *qr, *sf, *mem;
@@ -57,12 +57,11 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	tlen16 = (tlen + 15) / 16 * 16;
 	n_col = w + 1 < tlen16? w + 1 : tlen16; // number of columns in the backtrack matrix
 	n_col += 16, tlen16 += 16; // leave enough space at the end
+	qlen16 = (qlen + 15) / 16 * 16 + 16;
 
-	mem = (uint8_t*)kcalloc(km, tlen16 * 5 + 15, 1);
+	mem = (uint8_t*)kcalloc(km, tlen16 * 6 + qlen16 + 15, 1);
 	u = (int8_t*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned (though not necessary)
-	v = u + tlen16, x = v + tlen16, y = x + tlen16, s = y + tlen16;
-	qr = (uint8_t*)kcalloc(km, (qlen + 15) / 16 * 16 + 16, 1);
-	sf = (uint8_t*)kcalloc(km, tlen16, 1);
+	v = u + tlen16, x = v + tlen16, y = x + tlen16, s = y + tlen16, sf = (uint8_t*)s + tlen16, qr = sf + tlen16;
 	H = (int32_t*)kcalloc(km, (tlen + 3) / 4 * 4 + 4, 4);
 	if (with_cigar) {
 		p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
@@ -212,7 +211,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			ez->score = H[tlen - 1];
 		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
 	}
-	kfree(km, mem); kfree(km, qr); kfree(km, sf);
+	kfree(km, mem);
 	if (with_cigar) { // backtrack
 		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else ksw_backtrack(km, 1, p, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
