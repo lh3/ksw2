@@ -1,4 +1,4 @@
-#include <stdio.h> // for debugging only
+#include <string.h>
 #include "ksw2.h"
 
 #ifdef __SSE2__
@@ -35,7 +35,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	int r, t, qe = q + e, n_col, *off = 0, tlen16, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
 	int8_t *u, *v, *x, *y, *s;
 	int32_t *H;
-	uint8_t *p = 0, *qr, *mem;
+	uint8_t *p = 0, *qr, *sf, *mem;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
 
 	zero_   = _mm_set1_epi8(0);
@@ -58,20 +58,21 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	mem = (uint8_t*)kcalloc(km, tlen16 * 5 + 15, 1);
 	u = (int8_t*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned (though not necessary)
 	v = u + tlen16, x = v + tlen16, y = x + tlen16, s = y + tlen16;
-	qr = (uint8_t*)kcalloc(km, qlen, 1);
+	qr = (uint8_t*)kcalloc(km, (qlen + 15) / 16 * 16 + 16, 1);
+	sf = (uint8_t*)kcalloc(km, tlen16, 1);
 	H = (int32_t*)kcalloc(km, (tlen + 3) / 4 * 4 + 4, 4);
 	if (with_cigar) {
 		p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
 		off = (int*)kmalloc(km, (qlen + tlen) * sizeof(int));
 	}
 
-	for (t = 0; t < qlen; ++t)
-		qr[t] = query[qlen - 1 - t];
+	for (t = 0; t < qlen; ++t) qr[t] = query[qlen - 1 - t];
+	memcpy(sf, target, tlen);
 
 	for (r = 0; r < qlen + tlen - 1; ++r) {
 		int st = 0, en = tlen - 1, max_H, max_t;
 		int8_t x1, v1;
-		uint8_t *pr = p + r * n_col;
+		uint8_t *pr = p + r * n_col, *qrr = qr + (qlen - 1 - r);
 		__m128i x1_, v1_;
 		// find the boundaries
 		if (st < r - qlen + 1) st = r - qlen + 1;
@@ -89,7 +90,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else y[r] = 0, u[r] = r? q : 0;
 		// loop fission: set scores first
 		for (t = st; t <= en; ++t)
-			s[t] = mat[target[t] * m + qr[t + qlen - 1 - r]];
+			s[t] = mat[sf[t] * m + qrr[t]];
 		// core loop
 		x1_ = _mm_cvtsi32_si128(x1);
 		v1_ = _mm_cvtsi32_si128(v1);
@@ -190,7 +191,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			ez->score = H[tlen - 1];
 		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
 	}
-	kfree(km, mem); kfree(km, qr);
+	kfree(km, mem); kfree(km, qr); kfree(km, sf);
 	if (with_cigar) { // backtrack
 		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else ksw_backtrack(km, 1, p, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
