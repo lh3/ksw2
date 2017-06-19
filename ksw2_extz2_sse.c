@@ -104,10 +104,15 @@ void ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint
 				z = _mm_max_epu8(z, a);                          // z = max(z, a); this works because both are non-negative
 #endif
 				__dp_code_block2;
+#ifdef __SSE4_1__
+				_mm_storeu_si128((__m128i*)&x[t], _mm_max_epi8(a, zero_));
+				_mm_storeu_si128((__m128i*)&y[t], _mm_max_epi8(b, zero_));
+#else
 				tmp = _mm_cmpgt_epi8(a, zero_);
 				_mm_storeu_si128((__m128i*)&x[t], _mm_and_si128(a, tmp));
 				tmp = _mm_cmpgt_epi8(b, zero_);
 				_mm_storeu_si128((__m128i*)&y[t], _mm_and_si128(b, tmp));
+#endif
 			}
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
 			for (t = st; t <= en; t += 16) {
@@ -140,7 +145,7 @@ void ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint
 				d = _mm_andnot_si128(_mm_cmpgt_epi8(z, a), flag1_); // d = z > a? 0 : 1
 #ifdef __SSE4_1__
 				z = _mm_max_epi8(z, a);                          // z = z > a? z : a (signed)
-				tmp = _mm_cmpgt(z, b);
+				tmp = _mm_cmpgt_epi8(z, b);
 				d = _mm_blendv_epi8(flag2_, d, tmp);             // d = z > b? d : 2
 #else // we need to emulate SSE4.1 intrinsics _mm_max_epi8() and _mm_blendv_epi8()
 				z = _mm_and_si128(z, _mm_cmpgt_epi8(z, zero_));  // z = z > 0? z : 0;
