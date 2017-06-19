@@ -10,13 +10,11 @@
 
 int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, ksw_extz_t *ez)
 {
-	int r, t, qe = q + e, n_col, *off, score, tlen16, *H;
+	int r, t, qe = q + e, n_col, *off, tlen16;
 	int8_t *u, *v, *x, *y, *s;
+	int32_t *H;
 	uint8_t *p = 0, *qr, *mem;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
-
-	ez->max_ql = ez->max_tl = ez->mqe_l = ez->mte_l = ez->n_cigar = 0;
-	ez->max = ez->mqe = ez->mte = KSW_NEG_INF;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
@@ -25,6 +23,10 @@ int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 	flag2_  = _mm_set1_epi8(2<<0);
 	flag4_  = _mm_set1_epi8(1<<2);
 	flag32_ = _mm_set1_epi8(2<<4);
+
+	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
+	ez->max = ez->mqe = ez->mte = KSW_NEG_INF;
+	ez->n_cigar = 0;
 
 	w = (w + 1 + 15) / 16 * 16 - 1;
 	tlen16 = (tlen + 15) / 16 * 16;
@@ -37,13 +39,13 @@ int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 	qr = (uint8_t*)kcalloc(km, qlen, 1);
 	p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
 	off = (int*)kmalloc(km, (qlen + tlen) * sizeof(int));
-	H = (int*)kcalloc(km, tlen, sizeof(int));
+	H = (int32_t*)kcalloc(km, (tlen + 3) / 4 * 4 + 4, 4);
 
 	for (t = 0; t < qlen; ++t)
 		qr[t] = query[qlen - 1 - t];
 
 	for (r = 0; r < qlen + tlen - 1; ++r) {
-		int st = 0, en = tlen - 1;
+		int st = 0, en = tlen - 1, max_H, max_t;
 		int8_t x1, v1;
 		uint8_t *pr = p + r * n_col;
 		__m128i x1_, v1_;
@@ -111,18 +113,39 @@ int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			_mm_storeu_si128((__m128i*)&y[t], _mm_and_si128(b, tmp));
 			_mm_storeu_si128((__m128i*)&pr[t - st], d);
 		}
+		// compute H[]
 		if (r > 0) {
-			H[en] = H[en-1] + u[en] - qe;
+			H[en] = H[en-1] + u[en] - qe; // special casing the last
 			for (t = st; t < en; ++t) H[t] += v[t] - qe;
-		} else H[0] = v[0] - qe - qe;
+		} else H[0] = v[0] - qe - qe; // special casing r==0
+		// update ez
+		if (en == tlen - 1 && H[en] > ez->mte)
+			ez->mte = H[en], ez->mte_q = r - en;
+		if (r - st == qlen - 1 && H[st] > ez->mqe)
+			ez->mqe = H[st], ez->mqe_t = st;
+		max_H = KSW_NEG_INF;
+		max_t = -1;
+		for (t = st; t <= en; ++t) // TODO: vectorize this loop!
+			if (H[t] > max_H)
+				max_H = H[t], max_t = t;
+		if (max_H > ez->max) {
+			ez->max = max_H, ez->max_t = max_t, ez->max_q = r - max_t;
+		} else if (r - max_t > ez->max_q) {
+			int tl = max_t - ez->max_t, ql = (r - max_t) - ez->max_q, l;
+			l = tl > ql? tl - ql : ql - tl;
+			if (ez->max - max_H > zdrop + l * e)
+				break;
+		}
+		if (r == qlen + tlen - 2 && en == tlen - 1)
+			ez->score = H[tlen - 1];
 		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
 	}
-	score = H[tlen - 1];
 	kfree(km, mem); kfree(km, qr);
 	{ // backtrack
 		int which = 0, i, j;
 		uint32_t tmp;
-		i = tlen - 1, j = qlen - 1;
+		if (ez->score > KSW_NEG_INF) i = tlen - 1, j = qlen - 1;
+		else i = ez->max_t, j = ez->max_q;
 		while (i >= 0 && j >= 0) {
 			r = i + j;
 			tmp = p[r * n_col + i - off[r]];
@@ -139,6 +162,6 @@ int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			tmp = ez->cigar[i], ez->cigar[i] = ez->cigar[ez->n_cigar-1-i], ez->cigar[ez->n_cigar-1-i] = tmp;
 	}
 	kfree(km, p); kfree(km, off); kfree(km, H);
-	return score;
+	return ez->score;
 }
 #endif // __SSE2__

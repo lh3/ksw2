@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
 	else if (strcmp(algo, "extz_sse") == 0) {
 		score = ksw_extz_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, 100, &ez);
 		n_cigar = ez.n_cigar, cigar = ez.cigar;
+		printf("max: %d; (%d,%d)\n", ez.max, ez.max_t, ez.max_q);
+		printf("mqe: %d; %d\n", ez.mqe, ez.mqe_t);
 	} else abort();
 	printf("%d\t", score);
 	for (i = 0; i < n_cigar; ++i)

@@ -6,9 +6,9 @@
 #define KSW_NEG_INF -0x40000000
 
 typedef struct {
-	int max, max_ql, max_tl;
-	int mqe, mqe_l;
-	int mte, mte_l;
+	int max, max_q, max_t;
+	int mqe, mqe_t;
+	int mte, mte_q;
 	int score;
 	int n_cigar, m_cigar;
 	uint32_t *cigar;
