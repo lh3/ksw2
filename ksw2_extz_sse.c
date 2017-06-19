@@ -99,7 +99,7 @@ void ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint
 				__dp_code_block1;
 #ifdef __SSE4_1__
 				z = _mm_max_epi8(z, a);                          // z = z > a? z : a (signed)
-#else // we need to emulate SSE4.1 intrinsics _mm_max_epi8() and _mm_blendv_epi8()
+#else // we need to emulate SSE4.1 intrinsics _mm_max_epi8()
 				z = _mm_and_si128(z, _mm_cmpgt_epi8(z, zero_));  // z = z > 0? z : 0;
 				z = _mm_max_epu8(z, a);                          // z = max(z, a); this works because both are non-negative
 #endif

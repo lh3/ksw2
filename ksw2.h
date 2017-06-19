@@ -9,11 +9,11 @@
 #define KSW_EZ_RIGHT      0x2
 
 typedef struct {
-	int max, max_q, max_t;
-	int mqe, mqe_t;
-	int mte, mte_q;
-	int score;
-	int n_cigar, m_cigar;
+	int max, max_q, max_t; // max extension score and coordinate
+	int mqe, mqe_t;        // max score when reaching the end of query
+	int mte, mte_q;        // max score when reaching the end of target
+	int score;             // max score reaching both ends; may be KSW_NEG_INF
+	int m_cigar, n_cigar;
 	uint32_t *cigar;
 } ksw_extz_t;
 
@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 /**
- * Global alignment
+ * NW-like extension
  *
  * @param km        memory pool, when used with kalloc
  * @param qlen      query length
@@ -34,6 +34,16 @@ extern "C" {
  * @param gapo      gap open penalty; a gap of length l cost "-(gapo+l*gape)"
  * @param gape      gap extension penalty
  * @param w         band width
+ * @param zdrop     off-diagonal drop-off to stop extension (positive)
+ * @param flag      flag (see KSW_EZ_* macros)
+ * @param ez        (out) scores and cigar
+ */
+void ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez);
+
+/**
+ * Global alignment
+ *
+ * (first 10 parameters identical to ksw_extz_sse())
  * @param n_cigar   (out) number of CIGAR elements
  * @param cigar     (out) BAM-encoded CIGAR; caller need to deallocate with kfree(km, )
  *
@@ -42,8 +52,6 @@ extern "C" {
 int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
-
-void ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez);
 
 #ifdef __cplusplus
 }
