@@ -8,7 +8,7 @@
 #include <smmintrin.h>
 #endif
 
-int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int *n_cigar_, uint32_t **cigar_)
+int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
 {
 	int r, t, n_col, *off, score, tlen16;
 	int8_t *u, *v, *x, *y, *s;
@@ -111,7 +111,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 	}
 	kfree(km, mem); kfree(km, qr);
 	{ // backtrack
-		int n_cigar = 0, m_cigar = 0, which = 0, i, j, k, l;
+		int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i, j, k, l;
 		uint32_t *cigar = 0, tmp;
 		i = tlen - 1, j = qlen - 1;
 		while (i >= 0 && j >= 0) {
@@ -128,7 +128,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 		if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
 		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
 			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
-		*n_cigar_ = n_cigar, *cigar_ = cigar;
+		*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
 
 		// compute score
 		for (k = 0, score = 0, i = j = 0; k < n_cigar; ++k) {

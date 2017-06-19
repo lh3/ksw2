@@ -3,7 +3,7 @@
 
 typedef struct { int32_t h, e; } eh_t;
 
-int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_)
+int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
 {
 	eh_t *eh;
 	int8_t *qp; // query profile
@@ -100,8 +100,8 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 
 	// backtrack
 	score = eh[qlen].h;
-	if (n_cigar_ && cigar_) {
-		int n_cigar = 0, m_cigar = 0, which = 0;
+	if (m_cigar_ && n_cigar_ && cigar_) {
+		int n_cigar = 0, m_cigar = *m_cigar_, which = 0;
 		uint32_t *cigar = 0, tmp;
 		i = tlen - 1, k = last_en - 1; // (i,k) points to the last cell; FIXME: with a moving band, we need to take care of last deletion/insertion!!!
 		while (i >= 0 && k >= 0) {
@@ -117,7 +117,7 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 		if (k >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, k + 1); // first insertion
 		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
 			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
-		*n_cigar_ = n_cigar, *cigar_ = cigar;
+		*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
 	}
 
 	kfree(km, qp); kfree(km, eh);
