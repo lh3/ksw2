@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
 	char *qseq, *tseq, *algo = "gg2";
 	uint32_t *cigar;
 	int8_t mat[25];
+	ksw_extz_t ez;
 
 	while ((c = getopt(argc, argv, "t:")) >= 0) {
 		if (c == 't') algo = optarg;
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: ksw2-global <DNA-target> <DNA-query>\n");
 		return 1;
 	}
+	memset(&ez, 0, sizeof(ksw_extz_t));
 	ksw_gen_simple_mat(5, mat, a, -b);
 	tseq = argv[optind], qseq = argv[optind+1];
 	tlen = strlen(tseq);
@@ -62,7 +64,10 @@ int main(int argc, char *argv[])
 	if (strcmp(algo, "gg") == 0)           score = ksw_gg(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, &n_cigar, &cigar);
 	else if (strcmp(algo, "gg2") == 0)     score = ksw_gg2(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, &n_cigar, &cigar);
 	else if (strcmp(algo, "gg2_sse") == 0) score = ksw_gg2_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, &n_cigar, &cigar);
-	else abort();
+	else if (strcmp(algo, "extz_sse") == 0) {
+		score = ksw_extz_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, 100, &ez);
+		n_cigar = ez.n_cigar, cigar = ez.cigar;
+	} else abort();
 	printf("%d\t", score);
 	for (i = 0; i < n_cigar; ++i)
 		printf("%d%c", cigar[i]>>4, "MID"[cigar[i]&0xf]);

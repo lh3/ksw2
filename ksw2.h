@@ -3,6 +3,17 @@
 
 #include <stdint.h>
 
+#define KSW_NEG_INF -0x40000000
+
+typedef struct {
+	int max, max_ql, max_tl;
+	int mqe, mqe_l;
+	int mte, mte_l;
+	int score;
+	int n_cigar, m_cigar;
+	uint32_t *cigar;
+} ksw_extz_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,6 +39,8 @@ extern "C" {
 int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_);
+
+int ksw_extz_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, ksw_extz_t *ez);
 
 #ifdef __cplusplus
 }
