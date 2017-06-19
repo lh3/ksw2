@@ -100,6 +100,9 @@ int main(int argc, char *argv[])
 		}
 		kseq_destroy(ks[0]);
 		kseq_destroy(ks[1]);
+		gzclose(fp[0]);
+		gzclose(fp[1]);
 	}
+	free(ez.cigar);
 	return 0;
 }

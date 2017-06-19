@@ -211,11 +211,11 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			ez->score = H[tlen - 1];
 		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
 	}
-	kfree(km, mem);
+	kfree(km, mem); kfree(km, H);
 	if (with_cigar) { // backtrack
 		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else ksw_backtrack(km, 1, p, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+		kfree(km, p); kfree(km, off);
 	}
-	kfree(km, p); kfree(km, off); kfree(km, H);
 }
 #endif // __SSE2__
