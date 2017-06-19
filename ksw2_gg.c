@@ -3,8 +3,6 @@
 
 typedef struct { int32_t h, e; } eh_t;
 
-#define NEG_INF -0x40000000
-
 int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *n_cigar_, uint32_t **cigar_)
 {
 	eh_t *eh;
@@ -32,11 +30,11 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 	eh[0].h = 0, eh[0].e = -gapoe - gapo;
 	for (j = 1; j <= qlen && j <= w; ++j)
 		eh[j].h = -(gapo + gape * j), eh[j].e = -(gapoe + gapo + gape * j);
-	for (; j <= qlen; ++j) eh[j].h = eh[j].e = NEG_INF; // everything is -inf outside the band
+	for (; j <= qlen; ++j) eh[j].h = eh[j].e = KSW_NEG_INF; // everything is -inf outside the band
 
 	// DP loop
 	for (i = 0; i < tlen; ++i) { // target sequence is in the outer loop
-		int32_t f = NEG_INF, h1, st, en, max = NEG_INF;
+		int32_t f = KSW_NEG_INF, h1, st, en, max = KSW_NEG_INF;
 		int8_t *q = &qp[target[i] * qlen];
 		#if 0
 		st = max_j > w? max_j - w : 0;
@@ -45,8 +43,8 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 		st = i > w? i - w : 0;
 		en = i + w + 1 < qlen? i + w + 1 : qlen;
 		#endif
-		h1 = st > 0? NEG_INF : -(gapo + gape * i);
-		f  = st > 0? NEG_INF : -(gapoe + gapo + gape * i);
+		h1 = st > 0? KSW_NEG_INF : -(gapo + gape * i);
+		f  = st > 0? KSW_NEG_INF : -(gapoe + gapo + gape * i);
 		off[i] = st;
 		if (n_cigar_ && cigar_) {
 			uint8_t *zi = &z[(long)i * n_col];
@@ -97,7 +95,7 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 				f  = f > h? f : h;
 			}
 		}
-		eh[en].h = h1, eh[en].e = NEG_INF, last_en = en;
+		eh[en].h = h1, eh[en].e = KSW_NEG_INF, last_en = en;
 	}
 
 	// backtrack

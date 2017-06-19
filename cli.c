@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
 	else if (strcmp(algo, "gg2") == 0)     score = ksw_gg2(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, &n_cigar, &cigar);
 	else if (strcmp(algo, "gg2_sse") == 0) score = ksw_gg2_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, &n_cigar, &cigar);
 	else if (strcmp(algo, "extz_sse") == 0) {
-		score = ksw_extz_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, 100, &ez);
-		n_cigar = ez.n_cigar, cigar = ez.cigar;
+		ksw_extz_sse(0, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, 5, mat, q, e, qlen > tlen? qlen : tlen, 100, 0, &ez);
+		n_cigar = ez.n_cigar, cigar = ez.cigar, score = ez.score;
 		printf("max: %d; (%d,%d)\n", ez.max, ez.max_t, ez.max_q);
 		printf("mqe: %d; %d\n", ez.mqe, ez.mqe_t);
 	} else abort();
