@@ -35,7 +35,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	int r, t, qe = q + e, n_col_, *off = 0, tlen_, qlen_, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
 	int last_st, last_en;
 	int32_t *H;
-	uint8_t *qr, *sf, *mem, *mem2;
+	uint8_t *qr, *sf, *mem, *mem2 = 0;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_, sc_mch_, sc_mis_, m1_;
 	__m128i *u, *v, *x, *y, *s, *p = 0;
 
