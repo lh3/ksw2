@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	void *km = 0;
 	int8_t a = 1, b = 1, q = 1, e = 1;
 	int c, i, pair = 1, w = -1, flag = KSW_EZ_SIMPLE_SC, rep = 1;
-	char *algo = "gg2";
+	char *algo = "extz";
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
@@ -79,7 +79,11 @@ int main(int argc, char *argv[])
 		else if (c == 'R') rep = atoi(optarg);
 	}
 	if (argc - optind < 2) {
-		fprintf(stderr, "Usage: ksw2-global <DNA-target> <DNA-query>\n");
+		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
+		fprintf(stderr, "Options:\n");
+		fprintf(stderr, "  -t STR      algorithm: gg, gg2, gg2_sse, gg2_sse_u, extz, extz2_sse, extz2_sse_u [%s]\n", algo);
+		fprintf(stderr, "  -w INT      band width [inf]\n");
+		fprintf(stderr, "  -R INT      repeat INT times (for benchmarking) [1]\n");
 		return 1;
 	}
 #ifdef HAVE_KALLOC
