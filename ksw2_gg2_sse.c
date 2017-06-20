@@ -10,9 +10,9 @@
 
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
 {
-	int r, t, n_col, *off, score, tlen16, last_st, last_en;
-	int8_t *u, *v, *x, *y, *s;
-	uint8_t *p, *qr, *mem;
+	int r, t, n_col, n_col_, *off, score, tlen_, last_st, last_en;
+	uint8_t *qr, *mem, *mem2;
+	__m128i *u, *v, *x, *y, *s, *p;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
 
 	zero_   = _mm_set1_epi8(0);
@@ -24,24 +24,25 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 	flag32_ = _mm_set1_epi8(2<<4);
 
 	n_col = w + 1 < tlen? w + 1 : tlen; // number of columns in the backtrack matrix
-	tlen16 = (tlen + 15) / 16 * 16;
-	n_col = (n_col + 15) / 16 * 16 + 16;
+	tlen_ = (tlen + 15) / 16;
+	n_col_ = (n_col + 15) / 16 + 1;
+	n_col = n_col_ * 16;
 
-	mem = (uint8_t*)kcalloc(km, tlen16 * 5 + 15, 1);
-	u = (int8_t*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
-	v = u + tlen16, x = v + tlen16, y = x + tlen16, s = y + tlen16;
+	mem = (uint8_t*)kcalloc(km, tlen_ * 5 + 1, 16);
+	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
+	v = u + tlen_, x = v + tlen_, y = x + tlen_, s = y + tlen_;
 	qr = (uint8_t*)kcalloc(km, qlen, 1);
-	p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
-	off = (int*)kmalloc(km, (qlen + tlen) * sizeof(int));
+	mem2 = (uint8_t*)kcalloc(km, (qlen + tlen - 1) * n_col_ + 1, 16);
+	p = (__m128i*)(((size_t)mem2 + 15) >> 4 << 4);
+	off = (int*)kmalloc(km, (qlen + tlen - 1) * sizeof(int));
 
 	for (t = 0; t < qlen; ++t)
 		qr[t] = query[qlen - 1 - t];
 
 	for (r = 0, last_st = last_en = -1; r < qlen + tlen - 1; ++r) {
-		int st = 0, en = tlen - 1, st0, en0;
+		int st = 0, en = tlen - 1, st0, en0, st_, en_;
 		int8_t x1, v1;
-		uint8_t *pr = p + r * n_col;
-		__m128i x1_, v1_;
+		__m128i x1_, v1_, *pr;
 		// find the boundaries
 		if (st < r - qlen + 1) st = r - qlen + 1;
 		if (en > r) en = r;
@@ -53,33 +54,35 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 		off[r] = st;
 		// set boundary conditions
 		if (st > 0) {
-			if (st >= last_st && st <= last_en) x1 = x[st - 1], v1 = v[st - 1]; // (r-1,s-1) calculated in the last round
+			if (st >= last_st && st <= last_en) x1 = ((uint8_t*)x)[st - 1], v1 = ((uint8_t*)v)[st - 1]; // (r-1,s-1) calculated in the last round
 			else x1 = v1 = 0; // not calculated; set to zeros
 		} else x1 = 0, v1 = r? q : 0;
-		if (en >= r) y[r] = 0, u[r] = r? q : 0;
+		if (en >= r) ((uint8_t*)y)[r] = 0, ((uint8_t*)u)[r] = r? q : 0;
 		// loop fission: set scores first
 		for (t = st0; t <= en0; ++t)
-			s[t] = mat[target[t] * m + qr[t + qlen - 1 - r]];
+			((uint8_t*)s)[t] = mat[target[t] * m + qr[t + qlen - 1 - r]];
 		// core loop
 		x1_ = _mm_cvtsi32_si128(x1);
 		v1_ = _mm_cvtsi32_si128(v1);
-		for (t = st; t <= en; t += 16) {
+		st_ = st>>4, en_ = en>>4;
+		pr = p + r * n_col_ - st_;
+		for (t = st_; t <= en_; ++t) {
 			__m128i d, z, a, b, xt1, vt1, ut, tmp;
 
-			z = _mm_add_epi8(_mm_load_si128((__m128i*)&s[t]), qe2_);
+			z = _mm_add_epi8(_mm_load_si128(&s[t]), qe2_);
 
-			xt1 = _mm_load_si128((__m128i*)&x[t]);          // xt1 <- x[r-1][t..t+15]
+			xt1 = _mm_load_si128(&x[t]);          // xt1 <- x[r-1][t..t+15]
 			tmp = _mm_srli_si128(xt1, 15);                   // tmp <- x[r-1][t+15]
 			xt1 = _mm_or_si128(_mm_slli_si128(xt1, 1), x1_); // xt1 <- x[r-1][t-1..t+14]
 			x1_ = tmp;
-			vt1 = _mm_load_si128((__m128i*)&v[t]);          // vt1 <- v[r-1][t..t+15]
+			vt1 = _mm_load_si128(&v[t]);          // vt1 <- v[r-1][t..t+15]
 			tmp = _mm_srli_si128(vt1, 15);                   // tmp <- v[r-1][t+15]
 			vt1 = _mm_or_si128(_mm_slli_si128(vt1, 1), v1_); // vt1 <- v[r-1][t-1..t+14]
 			v1_ = tmp;
 			a = _mm_add_epi8(xt1, vt1);                      // a <- x[r-1][t-1..t+14] + v[r-1][t-1..t+14]
 
-			ut = _mm_load_si128((__m128i*)&u[t]);           // ut <- u[t..t+15]
-			b = _mm_add_epi8(_mm_load_si128((__m128i*)&y[t]), ut); // b <- y[r-1][t..t+15] + u[r-1][t..t+15]
+			ut = _mm_load_si128(&u[t]);           // ut <- u[t..t+15]
+			b = _mm_add_epi8(_mm_load_si128(&y[t]), ut); // b <- y[r-1][t..t+15] + u[r-1][t..t+15]
 
 			d = _mm_and_si128(_mm_cmpgt_epi8(a, z), flag1_); // d = a > z? 1 : 0
 #ifdef __SSE4_1__
@@ -93,27 +96,27 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			d = _mm_or_si128(_mm_andnot_si128(tmp, d), _mm_and_si128(tmp, flag2_)); // d = b > z? 2 : d; emulating blendv
 #endif
 			z = _mm_max_epu8(z, b);                          // z = max(z, b); this works because both are non-negative
-			_mm_store_si128((__m128i*)&u[t], _mm_sub_epi8(z, vt1)); // u[r][t..t+15] <- z - v[r-1][t-1..t+14]
-			_mm_store_si128((__m128i*)&v[t], _mm_sub_epi8(z, ut));  // v[r][t..t+15] <- z - u[r-1][t..t+15]
+			_mm_store_si128(&u[t], _mm_sub_epi8(z, vt1)); // u[r][t..t+15] <- z - v[r-1][t-1..t+14]
+			_mm_store_si128(&v[t], _mm_sub_epi8(z, ut));  // v[r][t..t+15] <- z - u[r-1][t..t+15]
 
 			z = _mm_sub_epi8(z, q_);
 			a = _mm_sub_epi8(a, z);
 			b = _mm_sub_epi8(b, z);
 			tmp = _mm_cmpgt_epi8(a, zero_);
 			d = _mm_or_si128(d, _mm_and_si128(flag4_,  tmp));
-			_mm_store_si128((__m128i*)&x[t], _mm_and_si128(a, tmp));
+			_mm_store_si128(&x[t], _mm_and_si128(a, tmp));
 			tmp = _mm_cmpgt_epi8(b, zero_);
 			d = _mm_or_si128(d, _mm_and_si128(flag32_, tmp));
-			_mm_store_si128((__m128i*)&y[t], _mm_and_si128(b, tmp));
-			_mm_store_si128((__m128i*)&pr[t - st], d);
+			_mm_store_si128(&y[t], _mm_and_si128(b, tmp));
+			_mm_store_si128(&pr[t], d);
 		}
 		last_st = st, last_en = en;
 		// for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, u[t], v[t], x[t], y[t], pr[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
-	ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
+	ksw_backtrack(km, 1, (uint8_t*)p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
 	score = ksw_cigar2score(m, mat, q, e, query, target, *n_cigar_, *cigar_);
-	kfree(km, p); kfree(km, off);
+	kfree(km, mem2); kfree(km, off);
 	return score;
 }
 #endif // __SSE2__
