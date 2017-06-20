@@ -32,7 +32,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
 	v = u + tlen_, x = v + tlen_, y = x + tlen_, s = y + tlen_;
 	qr = (uint8_t*)kcalloc(km, qlen, 1);
-	mem2 = (uint8_t*)kcalloc(km, (qlen + tlen - 1) * n_col_ + 1, 16);
+	mem2 = (uint8_t*)kmalloc(km, ((qlen + tlen - 1) * n_col_ + 1) * 16);
 	p = (__m128i*)(((size_t)mem2 + 15) >> 4 << 4);
 	off = (int*)kmalloc(km, (qlen + tlen - 1) * sizeof(int));
 

@@ -95,7 +95,7 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 				f  = f > h? f : h;
 			}
 		}
-		eh[en].h = h1, eh[en].e = KSW_NEG_INF, last_en = en;
+		eh[en].h = h1, eh[en].e = KSW_NEG_INF;
 	}
 
 	// backtrack
