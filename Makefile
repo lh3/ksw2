@@ -1,5 +1,5 @@
 CC=			gcc
-CFLAGS=		-g -Wall -O2 -Wc++-compat 
+CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
 CPPFLAGS=	-DHAVE_KALLOC
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_gg2_sse_u.o \

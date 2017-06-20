@@ -76,7 +76,7 @@ int ksw_gg2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const uint
 #define kfree(km, ptr) free((ptr))
 #endif
 
-static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar, uint32_t *cigar, int op, int len)
+static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar, uint32_t *cigar, uint32_t op, int len)
 {
 	if (*n_cigar == 0 || op != (cigar[(*n_cigar) - 1]&0xf)) {
 		if (*n_cigar == *m_cigar) {
