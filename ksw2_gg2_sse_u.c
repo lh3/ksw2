@@ -107,7 +107,7 @@ int ksw_gg2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const uint
 			_mm_storeu_si128((__m128i*)&y[t], _mm_and_si128(b, tmp));
 			_mm_storeu_si128((__m128i*)&pr[t - st], d);
 		}
-		// for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, u[t], v[t], x[t], y[t], pr[t-st]); // for debugging
+		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, u[t], v[t], x[t], y[t], pr[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
 	ksw_backtrack(km, 1, p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);

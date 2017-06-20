@@ -49,8 +49,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 		if (st < (r-w+1)>>1) st = (r-w+1)>>1; // take the ceil
 		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor
 		st0 = st, en0 = en;
-		st = st / 16 * 16;
-		en = (en + 16) / 16 * 16;
+		st = st / 16 * 16, en = (en + 16) / 16 * 16 - 1;
 		off[r] = st;
 		// set boundary conditions
 		if (st > 0) {
@@ -112,7 +111,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			_mm_store_si128(&pr[t], d);
 		}
 		last_st = st, last_en = en;
-		// for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, u[t], v[t], x[t], y[t], pr[t-st]); // for debugging
+		//for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, ((uint8_t*)u)[t], ((uint8_t*)v)[t], ((uint8_t*)x)[t], ((uint8_t*)y)[t], ((uint8_t*)(p + r * n_col_))[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
 	ksw_backtrack(km, 1, (uint8_t*)p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);

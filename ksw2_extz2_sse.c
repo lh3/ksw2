@@ -82,7 +82,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		if (st < (r-w+1)>>1) st = (r-w+1)>>1; // take the ceil
 		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor
 		st0 = st, en0 = en;
-		st = st / 16 * 16, en = (en + 16) / 16 * 16;
+		st = st / 16 * 16, en = (en + 16) / 16 * 16 - 1;
 		// set boundary conditions
 		if (st > 0) {
 			if (st - 1 >= last_st && st - 1 <= last_en)
@@ -214,7 +214,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		if (r == qlen + tlen - 2 && en0 == tlen - 1)
 			ez->score = H[tlen - 1];
 		last_st = st, last_en = en;
-		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
+		//for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for debugging
 	}
 	kfree(km, mem); kfree(km, H);
 	if (with_cigar) { // backtrack
