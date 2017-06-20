@@ -62,6 +62,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 
 int main(int argc, char *argv[])
 {
+	void *km = 0;
 	int8_t a = 1, b = 1, q = 1, e = 1;
 	int c, i, pair = 1, w = -1, flag = KSW_EZ_SIMPLE_SC, rep = 1;
 	char *algo = "gg2";
@@ -78,13 +79,16 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: ksw2-global <DNA-target> <DNA-query>\n");
 		return 1;
 	}
+#ifdef HAVE_KALLOC
+	km = km_init();
+#endif
 	memset(&ez, 0, sizeof(ksw_extz_t));
 	ksw_gen_simple_mat(5, mat, a, -b);
 	fp[0] = gzopen(argv[optind], "r");
 	fp[1] = gzopen(argv[optind+1], "r");
 
 	if (fp[0] == 0 && fp[1] == 0) {
-		global_aln(algo, 0, argv[optind+1], argv[optind], 5, mat, q, e, w, 100, flag, &ez);
+		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, w, 100, flag, &ez);
 		printf("%d\t", ez.score);
 		for (i = 0; i < ez.n_cigar; ++i)
 			printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
@@ -97,7 +101,7 @@ int main(int argc, char *argv[])
 			while (kseq_read(ks[0]) > 0) {
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
-					global_aln(algo, 0, ks[0]->seq.s, ks[1]->seq.s, 5, mat, q, e, w, 100, flag, &ez);
+					global_aln(algo, km, ks[0]->seq.s, ks[1]->seq.s, 5, mat, q, e, w, 100, flag, &ez);
 				printf("%s\t%s\t%d\t", ks[0]->name.s, ks[1]->name.s, ez.score);
 				for (i = 0; i < ez.n_cigar; ++i)
 					printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
