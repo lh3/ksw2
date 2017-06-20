@@ -61,7 +61,8 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	mem = (uint8_t*)kcalloc(km, tlen_ * 6 + qlen_ + 1, 16);
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
 	v = u + tlen_, x = v + tlen_, y = x + tlen_, s = y + tlen_, sf = (uint8_t*)(s + tlen_), qr = sf + tlen_ * 16;
-	H = (int32_t*)kcalloc(km, (tlen + 3) / 4 * 4 + 4, 4);
+	H = (int32_t*)kmalloc(km, tlen_ * 16 * 4);
+	for (t = 0; t < tlen_ * 16; ++t) H[t] = KSW_NEG_INF;
 	if (with_cigar) {
 		mem2 = (uint8_t*)kmalloc(km, ((qlen + tlen - 1) * n_col_ + 1) * 16);
 		p = (__m128i*)(((size_t)mem2 + 15) >> 4 << 4);
@@ -188,21 +189,41 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_store_si128(&pr[t], d);
 			}
 		}
-		// compute H[]
+		// compute H[], max_H and max_t
 		if (r > 0) {
-			H[en0] = H[en0-1] + u8[en0] - qe; // special casing the last
-			for (t = st0; t < en0; ++t) H[t] += v8[t] - qe;
-		} else H[0] = v8[0] - qe - qe; // special casing r==0
+			int32_t HH[4], tt[4], en1 = st0 + (en0 - st0) / 4 * 4, i;
+			__m128i max_H_, max_t_, qe_;
+			max_H = H[en0] = H[en0-1] + u8[en0] - qe, max_t = en0; // special casing last H
+			max_H_ = _mm_set1_epi32(max_H);
+			max_t_ = _mm_set1_epi32(max_t);
+			qe_    = _mm_set1_epi32(q + e);
+			for (t = st0; t < en1; t += 4) {
+				__m128i H1, tmp, t_;
+				H1 = _mm_loadu_si128((__m128i*)&H[t]);
+				t_ = _mm_setr_epi32(v8[t], v8[t+1], v8[t+2], v8[t+3]);
+				H1 = _mm_add_epi32(H1, t_);
+				H1 = _mm_sub_epi32(H1, qe_);
+				_mm_storeu_si128((__m128i*)&H[t], H1);
+				t_ = _mm_setr_epi32(t, t+1, t+2, t+3);
+				tmp = _mm_cmpgt_epi32(H1, max_H_);
+				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_));
+				max_t_ = _mm_or_si128(_mm_and_si128(tmp, t_), _mm_andnot_si128(tmp, max_t_));
+			}
+			_mm_storeu_si128((__m128i*)HH, max_H_);
+			_mm_storeu_si128((__m128i*)tt, max_t_);
+			for (i = 1, max_H = HH[0], max_t = tt[0]; i < 4; ++i)
+				if (max_H < HH[i]) max_H = HH[i], max_t = tt[i];
+			for (; t < en0; ++t) {
+				H[t] += (int32_t)v8[t] - qe;
+				if (H[t] > max_H)
+					max_H = H[t], max_t = t;
+			}
+		} else H[0] = v8[0] - qe - qe, max_H = H[0], max_t = 0; // special casing r==0
 		// update ez
 		if (en0 == tlen - 1 && H[en0] > ez->mte)
 			ez->mte = H[en0], ez->mte_q = r - en;
 		if (r - st0 == qlen - 1 && H[st0] > ez->mqe)
 			ez->mqe = H[st0], ez->mqe_t = st0;
-		max_H = KSW_NEG_INF;
-		max_t = -1;
-		for (t = st0; t <= en0; ++t) // TODO: vectorize this loop!
-			if (H[t] > max_H)
-				max_H = H[t], max_t = t;
 		if (max_H > ez->max) {
 			ez->max = max_H, ez->max_t = max_t, ez->max_q = r - max_t;
 		} else if (r - max_t > ez->max_q) {
