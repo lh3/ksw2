@@ -7,14 +7,14 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 {
 	eh_t *eh;
 	int8_t *qp; // query profile
-	int32_t i, j, k, max_j = 0, gapoe = gapo + gape, score, n_col, *off = 0;
+	int32_t i, j, k, gapoe = gapo + gape, score, n_col, *off = 0;
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	// allocate memory
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
 	qp = kmalloc(km, qlen * m);
 	eh = kcalloc(km, qlen + 1, 8);
-	if (n_cigar_ && cigar_) {
+	if (m_cigar_ && n_cigar_ && cigar_) {
 		*n_cigar_ = 0;
 		z = kmalloc(km, (size_t)n_col * tlen);
 		off = kcalloc(km, tlen, 4);
@@ -34,15 +34,10 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 
 	// DP loop
 	for (i = 0; i < tlen; ++i) { // target sequence is in the outer loop
-		int32_t f = KSW_NEG_INF, h1, st, en, max = KSW_NEG_INF;
+		int32_t f = KSW_NEG_INF, h1, st, en;
 		int8_t *q = &qp[target[i] * qlen];
-		#if 0
-		st = max_j > w? max_j - w : 0;
-		en = max_j + w + 1 < qlen? max_j + w + 1 : qlen;
-		#else
 		st = i > w? i - w : 0;
 		en = i + w + 1 < qlen? i + w + 1 : qlen;
-		#endif
 		h1 = st > 0? KSW_NEG_INF : -(gapoe + gape * i);
 		f  = st > 0? KSW_NEG_INF : -(gapoe + gapoe + gape * i);
 		off[i] = st;
@@ -64,8 +59,6 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 				d = h >= f? d : 2;
 				h = h >= f? h : f;
 				h1 = h;
-				max_j = max > h? max_j : j;
-				max   = max > h? max   : h;
 				h -= gapoe;
 				e -= gape;
 				d |= e > h? 1<<2 : 0;
@@ -85,8 +78,6 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 				h = h >= e? h : e;
 				h = h >= f? h : f;
 				h1 = h;
-				max_j = max > h? max_j : j;
-				max   = max > h? max   : h;
 				h -= gapoe;
 				e -= gape;
 				e  = e > h? e : h;
