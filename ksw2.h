@@ -81,7 +81,7 @@ static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar, uin
 	if (*n_cigar == 0 || op != (cigar[(*n_cigar) - 1]&0xf)) {
 		if (*n_cigar == *m_cigar) {
 			*m_cigar = *m_cigar? (*m_cigar)<<1 : 4;
-			cigar = krealloc(km, cigar, (*m_cigar) << 2);
+			cigar = (uint32_t*)krealloc(km, cigar, (*m_cigar) << 2);
 		}
 		cigar[(*n_cigar)++] = len<<4 | op;
 	} else cigar[(*n_cigar)-1] += len<<4;

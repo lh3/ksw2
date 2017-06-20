@@ -12,12 +12,12 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 
 	// allocate memory
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
-	qp = kmalloc(km, qlen * m);
-	eh = kcalloc(km, qlen + 1, 8);
+	qp = (int8_t*)kmalloc(km, qlen * m);
+	eh = (eh_t*)kcalloc(km, qlen + 1, 8);
 	if (m_cigar_ && n_cigar_ && cigar_) {
 		*n_cigar_ = 0;
-		z = kmalloc(km, (size_t)n_col * tlen);
-		off = kcalloc(km, tlen, 4);
+		z = (uint8_t*)kmalloc(km, (size_t)n_col * tlen);
+		off = (int32_t*)kcalloc(km, tlen, 4);
 	}
 
 	// generate the query profile
