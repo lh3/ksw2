@@ -75,7 +75,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		int st = 0, en = tlen - 1, st0, en0, st_, en_, max_H, max_t;
 		int8_t x1, v1;
 		uint8_t *qrr = qr + (qlen - 1 - r), *u8 = (uint8_t*)u, *v8 = (uint8_t*)v;
-		__m128i x1_, v1_, *pr;
+		__m128i x1_, v1_;
 		// find the boundaries
 		if (st < r - qlen + 1) st = r - qlen + 1;
 		if (en > r) en = r;
@@ -83,7 +83,6 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor
 		st0 = st, en0 = en;
 		st = st / 16 * 16, en = (en + 16) / 16 * 16;
-		off[r] = st;
 		// set boundary conditions
 		if (st > 0) {
 			if (st - 1 >= last_st && st - 1 <= last_en)
@@ -115,7 +114,6 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		x1_ = _mm_cvtsi32_si128(x1);
 		v1_ = _mm_cvtsi32_si128(v1);
 		st_ = st / 16, en_ = en / 16;
-		pr = p + r * n_col_ - st_;
 		if (!with_cigar) { // score only
 			for (t = st_; t <= en_; ++t) {
 				__m128i z, a, b, xt1, vt1, ut, tmp;
@@ -138,6 +136,8 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 #endif
 			}
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
+			__m128i *pr = p + r * n_col_ - st_;
+			off[r] = st;
 			for (t = st_; t <= en_; ++t) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
 				__dp_code_block1;
@@ -162,6 +162,8 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_store_si128(&pr[t], d);
 			}
 		} else { // gap right-alignment
+			__m128i *pr = p + r * n_col_ - st_;
+			off[r] = st;
 			for (t = st_; t <= en_; ++t) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
 				__dp_code_block1;
@@ -218,7 +220,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	if (with_cigar) { // backtrack
 		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 1, (uint8_t*)p, off, n_col_*16, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else ksw_backtrack(km, 1, (uint8_t*)p, off, n_col_*16, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
-		kfree(km, p); kfree(km, off);
+		kfree(km, mem2); kfree(km, off);
 	}
 }
 #endif // __SSE2__

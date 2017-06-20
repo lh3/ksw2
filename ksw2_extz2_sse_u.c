@@ -74,14 +74,13 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 	for (r = 0; r < qlen + tlen - 1; ++r) {
 		int st = 0, en = tlen - 1, max_H, max_t;
 		int8_t x1, v1;
-		uint8_t *pr = p + r * n_col, *qrr = qr + (qlen - 1 - r);
+		uint8_t *qrr = qr + (qlen - 1 - r);
 		__m128i x1_, v1_;
 		// find the boundaries
 		if (st < r - qlen + 1) st = r - qlen + 1;
 		if (en > r) en = r;
 		if (st < (r-w+1)>>1) st = (r-w+1)>>1; // take the ceil
 		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor
-		off[r] = st;
 		// set boundary conditions
 		if (st != 0) {
 			if (r > st + st + w - 1) x1 = v1 = 0;
@@ -136,6 +135,8 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 #endif
 			}
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
+			uint8_t *pr = p + r * n_col;
+			off[r] = st;
 			for (t = st; t <= en; t += 16) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
 				__dp_code_block1;
@@ -160,6 +161,8 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 				_mm_storeu_si128((__m128i*)&pr[t - st], d);
 			}
 		} else { // gap right-alignment
+			uint8_t *pr = p + r * n_col;
+			off[r] = st;
 			for (t = st; t <= en; t += 16) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
 				__dp_code_block1;
