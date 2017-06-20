@@ -54,7 +54,8 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 		off[r] = st;
 		// set boundary conditions
 		if (st > 0) {
-			if (st >= last_st && st <= last_en) x1 = ((uint8_t*)x)[st - 1], v1 = ((uint8_t*)v)[st - 1]; // (r-1,s-1) calculated in the last round
+			if (st - 1 >= last_st && st - 1 <= last_en)
+				x1 = ((uint8_t*)x)[st - 1], v1 = ((uint8_t*)v)[st - 1]; // (r-1,s-1) calculated in the last round
 			else x1 = v1 = 0; // not calculated; set to zeros
 		} else x1 = 0, v1 = r? q : 0;
 		if (en >= r) ((uint8_t*)y)[r] = 0, ((uint8_t*)u)[r] = r? q : 0;
