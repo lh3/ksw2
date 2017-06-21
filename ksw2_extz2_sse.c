@@ -197,7 +197,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			max_H_ = _mm_set1_epi32(max_H);
 			max_t_ = _mm_set1_epi32(max_t);
 			qe_    = _mm_set1_epi32(q + e);
-			for (t = st0; t < en1; t += 4) {
+			for (t = st0; t < en1; t += 4) { // this implements: H[t]+=v8[t]-qe; if(H[t]>max_H) max_H=H[t],max_t=t;
 				__m128i H1, tmp, t_;
 				H1 = _mm_loadu_si128((__m128i*)&H[t]);
 				t_ = _mm_setr_epi32(v8[t], v8[t+1], v8[t+2], v8[t+3]);
@@ -206,14 +206,19 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_storeu_si128((__m128i*)&H[t], H1);
 				t_ = _mm_setr_epi32(t, t+1, t+2, t+3);
 				tmp = _mm_cmpgt_epi32(H1, max_H_);
-				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_)); // TODO: use blendv for SSE4.1
+#ifdef __SSE4_1__
+				max_H_ = _mm_blendv_epi8(max_H_, H1, tmp);
+				max_t_ = _mm_blendv_epi8(max_t_, t_, tmp);
+#else
+				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_));
 				max_t_ = _mm_or_si128(_mm_and_si128(tmp, t_), _mm_andnot_si128(tmp, max_t_));
+#endif
 			}
 			_mm_storeu_si128((__m128i*)HH, max_H_);
 			_mm_storeu_si128((__m128i*)tt, max_t_);
 			for (i = 1, max_H = HH[0], max_t = tt[0]; i < 4; ++i)
 				if (max_H < HH[i]) max_H = HH[i], max_t = tt[i];
-			for (; t < en0; ++t) {
+			for (; t < en0; ++t) { // for the rest of values that haven't been computed with SSE
 				H[t] += (int32_t)v8[t] - qe;
 				if (H[t] > max_H)
 					max_H = H[t], max_t = t;

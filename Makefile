@@ -7,6 +7,10 @@ OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_gg2_sse_u.o \
 PROG=		ksw2-test
 LIBS=		-lz
 
+ifeq ($(sse),4)
+	CFLAGS+=-msse4
+endif
+
 .SUFFIXES:.c .o
 
 .c.o:

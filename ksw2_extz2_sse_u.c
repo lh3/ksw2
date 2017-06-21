@@ -204,8 +204,13 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 				_mm_storeu_si128((__m128i*)&H[t], H1);
 				t_ = _mm_setr_epi32(t, t+1, t+2, t+3);
 				tmp = _mm_cmpgt_epi32(H1, max_H_);
-				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_)); // TODO: use blendv for SSE4.1
+#ifdef __SSE4_1__
+				max_H_ = _mm_blendv_epi8(max_H_, H1, tmp); // _mm_blendv_epi8 also works for 32-bit integers here
+				max_t_ = _mm_blendv_epi8(max_t_, t_, tmp);
+#else
+				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_));
 				max_t_ = _mm_or_si128(_mm_and_si128(tmp, t_), _mm_andnot_si128(tmp, max_t_));
+#endif
 			}
 			_mm_storeu_si128((__m128i*)HH, max_H_);
 			_mm_storeu_si128((__m128i*)tt, max_t_);
