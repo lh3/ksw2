@@ -202,7 +202,7 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 				H1 = _mm_add_epi32(H1, t_);
 				H1 = _mm_sub_epi32(H1, qe_);
 				_mm_storeu_si128((__m128i*)&H[t], H1);
-				t_ = _mm_setr_epi32(t, t+1, t+2, t+3);
+				t_ = _mm_set1_epi32(t);
 				tmp = _mm_cmpgt_epi32(H1, max_H_);
 #ifdef __SSE4_1__
 				max_H_ = _mm_blendv_epi8(max_H_, H1, tmp); // _mm_blendv_epi8 also works for 32-bit integers here
@@ -214,8 +214,8 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 			}
 			_mm_storeu_si128((__m128i*)HH, max_H_);
 			_mm_storeu_si128((__m128i*)tt, max_t_);
-			for (i = 1, max_H = HH[0], max_t = tt[0]; i < 4; ++i)
-				if (max_H < HH[i]) max_H = HH[i], max_t = tt[i];
+			for (i = 0; i < 4; ++i)
+				if (max_H < HH[i]) max_H = HH[i], max_t = tt[i] + i;
 			for (; t < en; ++t) {
 				H[t] += (int32_t)v[t] - qe;
 				if (H[t] > max_H)
