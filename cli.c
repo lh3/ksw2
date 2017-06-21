@@ -117,6 +117,19 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	free(qseq); free(tseq);
 }
 
+static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
+{
+	printf("%s\t%s\t%d", tname, qname, ez->score);
+	printf("\t%d\t%d\t%d", ez->max, ez->max_t, ez->max_q);
+	if (ez->n_cigar > 0) {
+		int i;
+		putchar('\t');
+		for (i = 0; i < ez->n_cigar; ++i)
+			printf("%d%c", ez->cigar[i]>>4, "MID"[ez->cigar[i]&0xf]);
+	}
+	putchar('\n');
+}
+
 int main(int argc, char *argv[])
 {
 	void *km = 0;
@@ -157,10 +170,7 @@ int main(int argc, char *argv[])
 
 	if (fp[0] == 0 && fp[1] == 0) {
 		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, w, zdrop, flag, &ez);
-		printf("%d\t", ez.score);
-		for (i = 0; i < ez.n_cigar; ++i)
-			printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
-		printf("\n");
+		print_aln("first", "second", &ez);
 	} else if (fp[0] && fp[1]) {
 		kseq_t *ks[2];
 		ks[0] = kseq_init(fp[0]);
@@ -170,13 +180,7 @@ int main(int argc, char *argv[])
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
 					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, w, zdrop, flag, &ez);
-				printf("%s\t%s\t%d", ks[0]->name.s, ks[1]->name.s, ez.score);
-				if (ez.n_cigar > 0) {
-					putchar('\t');
-					for (i = 0; i < ez.n_cigar; ++i)
-						printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
-				}
-				putchar('\n');
+				print_aln(ks[0]->name.s, ks[1]->name.s, &ez);
 			}
 		}
 		kseq_destroy(ks[0]);
