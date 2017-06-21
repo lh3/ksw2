@@ -77,7 +77,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 		struct gaba_section_s qs = gaba_build_section(0, qseq, qlen);
 		struct gaba_section_s ts = gaba_build_section(2, tseq, tlen);
 
-		gaba_t *ctx = gaba_init(GABA_PARAMS(.xdrop = 120, GABA_SCORE_SIMPLE(mat[0], abs(mat[1]), q, e)));
+		gaba_t *ctx = gaba_init(GABA_PARAMS(.xdrop = (zdrop<120?zdrop:120), GABA_SCORE_SIMPLE(mat[0], abs(mat[1]), q, e)));
 		void const *lim = (void const *)0x800000000000;
 		gaba_dp_t *dp = gaba_dp_init(ctx, lim, lim);
 		struct gaba_fill_s *f = gaba_dp_fill_root(dp, &qs, 0, &ts, 0);
@@ -99,16 +99,17 @@ int main(int argc, char *argv[])
 {
 	void *km = 0;
 	int8_t a = 1, b = 1, q = 1, e = 1;
-	int c, i, pair = 1, w = -1, flag = KSW_EZ_SIMPLE_SC, rep = 1;
+	int c, i, pair = 1, w = -1, flag = KSW_EZ_SIMPLE_SC, rep = 1, zdrop = 100;
 	char *algo = "extz";
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rs")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsz:")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
+		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_NO_CIGAR;
 	}
@@ -118,6 +119,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -t STR      algorithm: gg, gg2, gg2_sse, gg2_sse_u, extz, extz2_sse, extz2_sse_u [%s]\n", algo);
 		fprintf(stderr, "  -R INT      repeat INT times (for benchmarking) [1]\n");
 		fprintf(stderr, "  -w INT      band width [inf]\n");
+		fprintf(stderr, "  -z INT      Z-drop [%d]\n", zdrop);
 		fprintf(stderr, "  -r          gap right alignment\n");
 		fprintf(stderr, "  -s          score only\n");
 		return 1;
@@ -131,7 +133,7 @@ int main(int argc, char *argv[])
 	fp[1] = gzopen(argv[optind+1], "r");
 
 	if (fp[0] == 0 && fp[1] == 0) {
-		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, w, 100, flag, &ez);
+		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, w, zdrop, flag, &ez);
 		printf("%d\t", ez.score);
 		for (i = 0; i < ez.n_cigar; ++i)
 			printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
@@ -144,7 +146,7 @@ int main(int argc, char *argv[])
 			while (kseq_read(ks[0]) > 0) {
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
-					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, w, 100, flag, &ez);
+					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, w, zdrop, flag, &ez);
 				printf("%s\t%s\t%d", ks[0]->name.s, ks[1]->name.s, ez.score);
 				if (ez.n_cigar > 0) {
 					putchar('\t');
