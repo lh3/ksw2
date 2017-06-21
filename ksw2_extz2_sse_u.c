@@ -32,7 +32,7 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 	a = _mm_sub_epi8(a, z); \
 	b = _mm_sub_epi8(b, z);
 
-	int r, t, qe = q + e, n_col, *off = 0, tlen16, qlen16, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
+	int r, t, qe = q + e, n_col, *off = 0, tlen16, qlen16, with_cigar = !(flag&KSW_EZ_SCORE_ONLY);
 	int8_t *u, *v, *x, *y, *s;
 	int32_t *H;
 	uint8_t *p = 0, *qr, *sf, *mem;

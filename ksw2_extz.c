@@ -7,7 +7,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 {
 	eh_t *eh;
 	int8_t *qp; // query profile
-	int32_t i, j, k, max_j = 0, gapoe = gapo + gape, n_col, *off = 0, with_cigar = !(flag&KSW_EZ_NO_CIGAR);
+	int32_t i, j, k, max_j = 0, gapoe = gapo + gape, n_col, *off = 0, with_cigar = !(flag&KSW_EZ_SCORE_ONLY);
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;

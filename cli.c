@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
-		else if (c == 's') flag |= KSW_EZ_NO_CIGAR;
+		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
 	}
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");

@@ -5,7 +5,7 @@
 
 #define KSW_NEG_INF -0x40000000
 
-#define KSW_EZ_NO_CIGAR   0x1
+#define KSW_EZ_SCORE_ONLY 0x1
 #define KSW_EZ_RIGHT      0x2
 #define KSW_EZ_SIMPLE_SC  0x4 // match/mismatch only; last symbol is a wildcard
 
