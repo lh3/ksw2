@@ -32,7 +32,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	// fill the first row
 	eh[0].h = 0, eh[0].e = -gapoe - gapoe;
 	for (j = 1; j <= qlen && j <= w; ++j)
-		eh[j].h = -(gapoe + gape * j), eh[j].e = -(gapoe + gapoe + gape * j);
+		eh[j].h = -(gapoe + gape * (j - 1)), eh[j].e = -(gapoe + gapoe + gape * j);
 	for (; j <= qlen; ++j) eh[j].h = eh[j].e = KSW_NEG_INF; // everything is -inf outside the band
 
 	// DP loop
