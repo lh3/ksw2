@@ -1,9 +1,9 @@
 ## What
 
 KSW2 is a library to align a pair of biological sequences based on dynamic
-programming. So far it comes with global alignment and alignment extension (no
-local alignment yet) under an affine gap penalty. It supports fixed banding and
-optionally produces alignment paths (i.e. CIGARs) with gaps either left- or
+programming (DP). So far it comes with global alignment and alignment extension
+(no local alignment yet) under an affine gap penalty. It supports fixed banding
+and optionally produces alignment paths (i.e. CIGARs) with gaps either left- or
 right-aligned.  In addition to plain implementations of the algorithms, KSW2
 also provides implementations using SSE2 and SSE4.1 intrinsics. It adopted
 [Hajime Suzuki][hs]'s [formulation][hs-eq] which enables 16-way SSE
@@ -11,15 +11,27 @@ parallelization regardless of the maximum score of the alignment.
 
 ## Why
 
-KSW2 comes with a set of features needed for my applications. Its predecessor
-[KSW][klib] implements the same set of features, but it has minor bugs and is
-slow for global alignment and alignment extension. [edlib][edlib] is very fast
-but it does not support affine gap penalty and requires the alignment to reach
-the end of the query. [Parasail][para] and [libssa][ssa] do not produce CIGARs
-or support extension. [Opal][opal] implements inter-sequence parallelization
-which is not applicable to my use cases. [SSW][ssw] comes with local alignment
-only. [libgaba][gaba] is probably the closest to KSW2, but it still lacks a few
-subtle features such as diagonal X-dropoff (which I called as Z-dropoff).
+KSW2 comes with a set of features needed for developing aligners. For a
+seed-and-extend based aligner, KSW2 can be used to close gaps between seeds.
+When there is a long gap between two adjacent seed hits, we prefer a global
+alignment but cannot force the query and reference sequences to be aligned
+because they may differ due to structural variations such as long inversions.
+KSW2 can detect poorly aligned regions with diagonal X-dropoff, which I call as
+Z-dropoff. Z-dropoff is like X-dropoff except that it does not panelize gap
+extensions and thus helps to recover long gaps. Variant callers for
+high-throughput sequencing data usually expect gaps to be left-aligned.
+To achieve this, we need gaps to be left-aligned when we extend to the right,
+while right-aligned when we extend to the left.
+
+There are many libraries to perform DP-based alignment. [KSW][klib], the
+predecessor of KSW2, implements the same set of features, but it has minor bugs
+and is slow for global alignment and alignment extension.  [edlib][edlib] is
+very fast but it does not support affine gap penalty and requires the alignment
+to reach the end of the query. [Parasail][para] and [libssa][ssa] do not
+produce CIGARs or support extension. [Opal][opal] implements inter-sequence
+parallelization which is not applicable to my use cases. [SSW][ssw] comes with
+local alignment only. [libgaba][gaba] is probably the closest to KSW2, but it
+still lacks a few subtle features such as diagonal X-dropoff.
 
 ## How to use
 
