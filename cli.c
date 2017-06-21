@@ -6,6 +6,10 @@
 #include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
 
+#ifdef HAVE_GABA
+#include "gaba.h"
+#endif
+
 unsigned char seq_nt4_table[256] = {
 	0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
 	4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
@@ -43,10 +47,13 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 {
 	int i, qlen, tlen;
 	uint8_t *qseq, *tseq;
+	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
+	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
+	ez->n_cigar = 0;
 	qlen = strlen(qseq_);
 	tlen = strlen(tseq_);
-	qseq = (uint8_t*)malloc(qlen);
-	tseq = (uint8_t*)malloc(tlen);
+	qseq = (uint8_t*)calloc(qlen + 33, 1); // 32 for gaba
+	tseq = (uint8_t*)calloc(tlen + 33, 1);
 	for (i = 0; i < qlen; ++i)
 		qseq[i] = seq_nt4_table[(uint8_t)qseq_[i]];
 	for (i = 0; i < tlen; ++i)
@@ -59,6 +66,31 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse_u") == 0) ksw_extz2_sse_u(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
+#ifdef HAVE_GABA
+	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
+		int buf_len = 0x10000;
+		char *cigar = (char*)calloc(buf_len, 1);
+		for (i = 0; i < qlen; ++i)
+			qseq[i] = qseq[i] < 4? 1<<qseq[i] : 15;
+		for (i = 0; i < tlen; ++i)
+			tseq[i] = tseq[i] < 4? 1<<tseq[i] : 15;
+		struct gaba_section_s qs = gaba_build_section(0, qseq, qlen);
+		struct gaba_section_s ts = gaba_build_section(2, tseq, tlen);
+
+		gaba_t *ctx = gaba_init(GABA_PARAMS(.xdrop = 120, GABA_SCORE_SIMPLE(mat[0], abs(mat[1]), q, e)));
+		void const *lim = (void const *)0x800000000000;
+		gaba_dp_t *dp = gaba_dp_init(ctx, lim, lim);
+		struct gaba_fill_s *f = gaba_dp_fill_root(dp, &qs, 0, &ts, 0);
+		f = gaba_dp_fill(dp, f, &qs, &ts);
+		gaba_alignment_t *r = gaba_dp_trace(dp, 0, f, 0);
+		ez->score = r->score;
+		gaba_dp_dump_cigar_forward(cigar, buf_len, r->path->array, 0, r->path->len);
+		printf("gaba cigar: %s\n", cigar);
+		gaba_dp_clean(dp);
+		gaba_clean(ctx);
+		free(cigar);
+	}
+#endif
 	else abort();
 	free(qseq); free(tseq);
 }
@@ -73,11 +105,12 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:r")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rs")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
+		else if (c == 's') flag |= KSW_EZ_NO_CIGAR;
 	}
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
@@ -86,6 +119,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -R INT      repeat INT times (for benchmarking) [1]\n");
 		fprintf(stderr, "  -w INT      band width [inf]\n");
 		fprintf(stderr, "  -r          gap right alignment\n");
+		fprintf(stderr, "  -s          score only\n");
 		return 1;
 	}
 #ifdef HAVE_KALLOC
@@ -110,11 +144,14 @@ int main(int argc, char *argv[])
 			while (kseq_read(ks[0]) > 0) {
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
-					global_aln(algo, km, ks[0]->seq.s, ks[1]->seq.s, 5, mat, q, e, w, 100, flag, &ez);
-				printf("%s\t%s\t%d\t", ks[0]->name.s, ks[1]->name.s, ez.score);
-				for (i = 0; i < ez.n_cigar; ++i)
-					printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
-				printf("\n");
+					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, w, 100, flag, &ez);
+				printf("%s\t%s\t%d", ks[0]->name.s, ks[1]->name.s, ez.score);
+				if (ez.n_cigar > 0) {
+					putchar('\t');
+					for (i = 0; i < ez.n_cigar; ++i)
+						printf("%d%c", ez.cigar[i]>>4, "MID"[ez.cigar[i]&0xf]);
+				}
+				putchar('\n');
 			}
 		}
 		kseq_destroy(ks[0]);
