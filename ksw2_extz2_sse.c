@@ -51,7 +51,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	m1_     = _mm_set1_epi8(m - 1); // wildcard
 
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
-	ez->max = ez->mqe = ez->mte = KSW_NEG_INF;
+	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
 	ez->n_cigar = 0;
 
 	tlen_ = (tlen + 15) / 16;
