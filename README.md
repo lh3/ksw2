@@ -68,7 +68,11 @@ pure left-aligned global alignment.
   long gaps. It is not clear about its added value without more careful
   evaluations.
 
-* The inner loop with SSE intrinsics could probably be improved.
+* The inner loop with SSE intrinsics could probably be improved. On a few
+  examples, `ksw2_gg2` is about twice as slow as `ksw2_gg`, suggesting the
+  diagonal formulation is less efficient. At the same time, `ksw2_extz2_sse` is
+  four times as fast as `ksw2_extz`, suggesting SSE works, but the speedup
+  is not as good as 8 or even 16 fold. There may be room for improvement.
 
 * No thorough test or benchmarking as of now.
 
