@@ -73,17 +73,19 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:r")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
+		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 	}
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "  -t STR      algorithm: gg, gg2, gg2_sse, gg2_sse_u, extz, extz2_sse, extz2_sse_u [%s]\n", algo);
-		fprintf(stderr, "  -w INT      band width [inf]\n");
 		fprintf(stderr, "  -R INT      repeat INT times (for benchmarking) [1]\n");
+		fprintf(stderr, "  -w INT      band width [inf]\n");
+		fprintf(stderr, "  -r          gap right alignment\n");
 		return 1;
 	}
 #ifdef HAVE_KALLOC
