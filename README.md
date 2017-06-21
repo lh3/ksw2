@@ -38,8 +38,8 @@ still lacks a few subtle features such as diagonal X-dropoff.
 Each `ksw2_*.c` file implements a single function and is independent of each
 other. Here are brief descriptions about what each file implements:
 
-* `ksw2_gg.c`: global alignment; Green's formulation
-* `ksw2_gg2.c`: global alignment; Suzuki's formulation
+* `ksw2_gg.c`: global alignment; Green's standard formulation
+* `ksw2_gg2.c`: global alignment; Suzuki's diagonal formulation
 * `ksw2_gg2_sse_u.c`: global alignment with unaligned SSE intrinsics; Suzuki's
 * `ksw2_gg2_sse.c`: global alignment with mostly aligned SSE intrinsics; Suzuki's
 * `ksw2_extz.c`: alignment extension; Green's formulation
