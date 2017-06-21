@@ -10,6 +10,10 @@ KSEQ_INIT(gzFile, gzread)
 #include "gaba.h"
 #endif
 
+#ifdef HAVE_PARASAIL
+#include "parasail.h"
+#endif
+
 unsigned char seq_nt4_table[256] = {
 	0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
 	4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
@@ -91,7 +95,27 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 		free(cigar);
 	}
 #endif
-	else abort();
+#ifdef HAVE_PARASAIL
+	else if (strncmp(algo, "ps_", 3) == 0) {
+		parasail_matrix_t *ps_mat;
+		parasail_function_t *func;
+		parasail_result_t *res;
+		ps_mat = parasail_matrix_create("ACGTN", mat[0], mat[1]); // TODO: call parasail_matrix_set_value() to change N<->A/C/G/T scores
+		func = parasail_lookup_function(algo + 3);
+		if (func == 0) {
+			fprintf(stderr, "ERROR: can't find parasail function '%s'\n", algo + 3);
+			exit(1);
+		}
+		res = func(qseq_, qlen, tseq_, tlen, q+e, e, ps_mat);
+		ez->score = res->score;
+		parasail_matrix_free(ps_mat);
+		parasail_result_free(res);
+	}
+#endif
+	else {
+		fprintf(stderr, "ERROR: can't find algorithm '%s'\n", algo);
+		exit(1);
+	}
 	free(qseq); free(tseq);
 }
 

@@ -7,15 +7,25 @@ OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_gg2_sse_u.o \
 PROG=		ksw2-test
 LIBS=		-lz
 
-ifneq ($(gaba),)
+ifneq ($(gaba),) # gaba source code directory
 	CPPFLAGS += -DHAVE_GABA
 	INCLUDES += -I$(gaba)
 	LIBS_MORE += -L$(gaba)/build -lgaba
 	CFLAGS += -msse4
 endif
 
+ifneq ($(parasail),) # parasail install prefix
+	CPPFLAGS += -DHAVE_PARASAIL
+	INCLUDES += -I$(parasail)/include
+	LIBS_MORE += $(parasail)/lib/libparasail.a # don't link against the dynamic library
+endif
+
 ifneq ($(sse4),)
 	CFLAGS += -msse4
+endif
+
+ifneq ($(avx2),)
+	CFLAGS += -mavx2
 endif
 
 .SUFFIXES:.c .o
