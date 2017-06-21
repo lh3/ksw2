@@ -32,9 +32,10 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 	a = _mm_sub_epi8(a, z); \
 	b = _mm_sub_epi8(b, z);
 
-	int r, t, qe = q + e, n_col, *off = 0, tlen16, qlen16, with_cigar = !(flag&KSW_EZ_SCORE_ONLY);
+	int r, t, qe = q + e, n_col, *off = 0, tlen16, qlen16;
+	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), with_max = !(flag&KSW_EZ_GLOBAL_ONLY);
 	int8_t *u, *v, *x, *y, *s;
-	int32_t *H;
+	int32_t *H = 0, H0 = 0, last_H0_t = 0;
 	uint8_t *p = 0, *qr, *sf, *mem;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_, sc_mch_, sc_mis_, m1_;
 
@@ -62,7 +63,10 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 	mem = (uint8_t*)kcalloc(km, tlen16 * 6 + qlen16 + 15, 1);
 	u = (int8_t*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned (though not necessary)
 	v = u + tlen16, x = v + tlen16, y = x + tlen16, s = y + tlen16, sf = (uint8_t*)s + tlen16, qr = sf + tlen16;
-	H = (int32_t*)kcalloc(km, (tlen + 3) / 4 * 4 + 4, 4);
+	if (with_max) {
+		H = (int32_t*)kmalloc(km, tlen16 * 4);
+		for (t = 0; t < tlen16; ++t) H[t] = KSW_NEG_INF;
+	}
 	if (with_cigar) {
 		p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
 		off = (int*)kmalloc(km, (qlen + tlen) * sizeof(int));
@@ -187,56 +191,65 @@ void ksw_extz2_sse_u(void *km, int qlen, const uint8_t *query, int tlen, const u
 				_mm_storeu_si128((__m128i*)&pr[t - st], d);
 			}
 		}
-		// compute H[]
-		if (r > 0) {
-			int32_t HH[4], tt[4], en1 = st + (en - st) / 4 * 4, i;
-			__m128i max_H_, max_t_, qe_;
-			max_H = H[en] = H[en-1] + u[en] - qe, max_t = en; // special casing last H
-			max_H_ = _mm_set1_epi32(max_H);
-			max_t_ = _mm_set1_epi32(max_t);
-			qe_    = _mm_set1_epi32(q + e);
-			for (t = st; t < en1; t += 4) {
-				__m128i H1, tmp, t_;
-				H1 = _mm_loadu_si128((__m128i*)&H[t]);
-				t_ = _mm_setr_epi32(v[t], v[t+1], v[t+2], v[t+3]);
-				H1 = _mm_add_epi32(H1, t_);
-				H1 = _mm_sub_epi32(H1, qe_);
-				_mm_storeu_si128((__m128i*)&H[t], H1);
-				t_ = _mm_set1_epi32(t);
-				tmp = _mm_cmpgt_epi32(H1, max_H_);
+		if (with_max) {
+			if (r > 0) {
+				int32_t HH[4], tt[4], en1 = st + (en - st) / 4 * 4, i;
+				__m128i max_H_, max_t_, qe_;
+				max_H = H[en] = H[en-1] + u[en] - qe, max_t = en; // special casing last H
+				max_H_ = _mm_set1_epi32(max_H);
+				max_t_ = _mm_set1_epi32(max_t);
+				qe_    = _mm_set1_epi32(q + e);
+				for (t = st; t < en1; t += 4) {
+					__m128i H1, tmp, t_;
+					H1 = _mm_loadu_si128((__m128i*)&H[t]);
+					t_ = _mm_setr_epi32(v[t], v[t+1], v[t+2], v[t+3]);
+					H1 = _mm_add_epi32(H1, t_);
+					H1 = _mm_sub_epi32(H1, qe_);
+					_mm_storeu_si128((__m128i*)&H[t], H1);
+					t_ = _mm_set1_epi32(t);
+					tmp = _mm_cmpgt_epi32(H1, max_H_);
 #ifdef __SSE4_1__
-				max_H_ = _mm_blendv_epi8(max_H_, H1, tmp); // _mm_blendv_epi8 also works for 32-bit integers here
-				max_t_ = _mm_blendv_epi8(max_t_, t_, tmp);
+					max_H_ = _mm_blendv_epi8(max_H_, H1, tmp); // _mm_blendv_epi8 also works for 32-bit integers here
+					max_t_ = _mm_blendv_epi8(max_t_, t_, tmp);
 #else
-				max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_));
-				max_t_ = _mm_or_si128(_mm_and_si128(tmp, t_), _mm_andnot_si128(tmp, max_t_));
+					max_H_ = _mm_or_si128(_mm_and_si128(tmp, H1), _mm_andnot_si128(tmp, max_H_));
+					max_t_ = _mm_or_si128(_mm_and_si128(tmp, t_), _mm_andnot_si128(tmp, max_t_));
 #endif
+				}
+				_mm_storeu_si128((__m128i*)HH, max_H_);
+				_mm_storeu_si128((__m128i*)tt, max_t_);
+				for (i = 0; i < 4; ++i)
+					if (max_H < HH[i]) max_H = HH[i], max_t = tt[i] + i;
+				for (; t < en; ++t) {
+					H[t] += (int32_t)v[t] - qe;
+					if (H[t] > max_H)
+						max_H = H[t], max_t = t;
+				}
+			} else H[0] = v[0] - qe - qe, max_H = H[0], max_t = 0; // special casing r==0
+			// update ez
+			if (en == tlen - 1 && H[en] > ez->mte)
+				ez->mte = H[en], ez->mte_q = r - en;
+			if (r - st == qlen - 1 && H[st] > ez->mqe)
+				ez->mqe = H[st], ez->mqe_t = st;
+			if (max_H > ez->max) {
+				ez->max = max_H, ez->max_t = max_t, ez->max_q = r - max_t;
+			} else if (r - max_t > ez->max_q) {
+				int tl = max_t - ez->max_t, ql = (r - max_t) - ez->max_q, l;
+				l = tl > ql? tl - ql : ql - tl;
+				if (ez->max - max_H > zdrop + l * e)
+					break;
 			}
-			_mm_storeu_si128((__m128i*)HH, max_H_);
-			_mm_storeu_si128((__m128i*)tt, max_t_);
-			for (i = 0; i < 4; ++i)
-				if (max_H < HH[i]) max_H = HH[i], max_t = tt[i] + i;
-			for (; t < en; ++t) {
-				H[t] += (int32_t)v[t] - qe;
-				if (H[t] > max_H)
-					max_H = H[t], max_t = t;
-			}
-		} else H[0] = v[0] - qe - qe, max_H = H[0], max_t = 0; // special casing r==0
-		// update ez
-		if (en == tlen - 1 && H[en] > ez->mte)
-			ez->mte = H[en], ez->mte_q = r - en;
-		if (r - st == qlen - 1 && H[st] > ez->mqe)
-			ez->mqe = H[st], ez->mqe_t = st;
-		if (max_H > ez->max) {
-			ez->max = max_H, ez->max_t = max_t, ez->max_q = r - max_t;
-		} else if (r - max_t > ez->max_q) {
-			int tl = max_t - ez->max_t, ql = (r - max_t) - ez->max_q, l;
-			l = tl > ql? tl - ql : ql - tl;
-			if (ez->max - max_H > zdrop + l * e)
-				break;
+			if (r == qlen + tlen - 2 && en == tlen - 1)
+				ez->score = H[tlen - 1];
+		} else {
+			if (r > 0) {
+				if (last_H0_t >= st && last_H0_t <= en)
+					H0 += v[last_H0_t] - qe;
+				else ++last_H0_t, H0 += u[last_H0_t] - qe;
+			} else H0 = v[0] - qe - qe, last_H0_t = 0;
+			if (r == qlen + tlen - 2 && en == tlen - 1)
+				ez->score = H0;
 		}
-		if (r == qlen + tlen - 2 && en == tlen - 1)
-			ez->score = H[tlen - 1];
 		//for (t = st; t <= en; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\t%x\n", r, t, u[t], v[t], x[t], y[t], H[t], pr[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, H);
