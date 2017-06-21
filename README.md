@@ -38,11 +38,11 @@ subtle features such as diagonal X-drop.
 Each `ksw2_*.c` file implements a single function and is independent of each
 other. Here are brief descriptions about what each file implements:
 
-* [ksw2_gg.c][ksw2_gg.c]: global alignment; Green's standard formulation
-* [ksw2_gg2.c][ksw2_gg2.c]: global alignment; Suzuki's diagonal formulation
-* [ksw2_gg2_sse.c][ksw2_gg2_sse.c]: global alignment with mostly aligned SSE intrinsics; Suzuki's
-* [ksw2_extz.c][ksw2_extz.c]: alignment extension; Green's formulation
-* [ksw2_extz2_sse.c][ksw2_extz2_sse.c]: extension with mostly aligned SSE intrinsics; Suzuki's
+* [ksw2_gg.c](ksw2_gg.c): global alignment; Green's standard formulation
+* [ksw2_gg2.c](ksw2_gg2.c): global alignment; Suzuki's diagonal formulation
+* [ksw2_gg2_sse.c](ksw2_gg2_sse.c): global alignment with mostly aligned SSE intrinsics; Suzuki's
+* [ksw2_extz.c](ksw2_extz.c): alignment extension; Green's formulation
+* [ksw2_extz2_sse.c](ksw2_extz2_sse.c): extension with mostly aligned SSE intrinsics; Suzuki's
 
 Users are encouraged to copy the header file `ksw2.h` and relevant
 `ksw2_*.c` file to their own source code trees. On x86 CPUs with SSE2
