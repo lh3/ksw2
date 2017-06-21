@@ -40,10 +40,8 @@ other. Here are brief descriptions about what each file implements:
 
 * [ksw2_gg.c][ksw2_gg.c]: global alignment; Green's standard formulation
 * [ksw2_gg2.c][ksw2_gg2.c]: global alignment; Suzuki's diagonal formulation
-* [ksw2_gg2_sse_u.c][ksw2_gg2_sse_u.c]: global alignment with unaligned SSE intrinsics; Suzuki's
 * [ksw2_gg2_sse.c][ksw2_gg2_sse.c]: global alignment with mostly aligned SSE intrinsics; Suzuki's
 * [ksw2_extz.c][ksw2_extz.c]: alignment extension; Green's formulation
-* [ksw2_extz2_sse_u.c][ksw2_extz2_sse_u.c]: extension with unaligned SSE intrinsics; Suzuki's
 * [ksw2_extz2_sse.c][ksw2_extz2_sse.c]: extension with mostly aligned SSE intrinsics; Suzuki's
 
 Users are encouraged to copy the header file `ksw2.h` and relevant
