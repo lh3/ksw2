@@ -47,34 +47,51 @@ other. Here are brief descriptions about what each file implements:
 Users are encouraged to copy the header file `ksw2.h` and relevant
 `ksw2_*.c` file to their own source code trees. On x86 CPUs with SSE2
 intrinsics, `ksw2_extz2_sse.c` is recommended in general. It supports global
-alignment, alignment extension with Z-dropoff, score-only alignment and
-right-aligned CIGARs. `ksw2_gg2_sse.c` is faster than `ksw2_extz2_sse.c` for
-pure left-aligned global alignment.
+alignment, alignment extension with Z-drop, score-only alignment, global-only
+alignment and right-aligned CIGARs. `ksw2_gg*.c` are mostly for demonstration
+and comparison purposes. They are annotated with more comments and easier to
+understand than `ksw2_ext*.c`.
 
-## Limitations
+## Performance Analysis
 
-* No dynamic banding. [edlib][edlib] dynamically changes the band width to
-  always find the optimal alignment without traversing every cell in the DP
-  matrix. The same strategy can be applied to KSW2 in principle. However, in
-  case of alignment extension, dynamic banding might not help much.
+The following table shows timing on two pairs of sequences (both in the "test"
+directory).
 
-* No adaptive banding. [libgaba][gaba] implements another type of dynamic
-  banding called [adaptive banding][adap-band] (which I have thought of
-  independently). It moves the band of fixed width based on the score at the
-  current anti-diagonal. It effectively increases the band width at little
-  computational cost. However, this strategy does not help much to find
-  long gaps. It is not clear about its added value without more careful
-  evaluations.
+|Data set|Command line options             |Time (s)|CIGAR|Ext|SIMD|Source  |
+|:-------|:--------------------------------|:-------|:---:|:-:|:--:|:-------|
+|50k     |-t gg -s                         |7.3     |N    |N  |N   |ksw2    |
+|        |-t extz -s                       |9.2     |N    |Y  |N   |ksw2    |
+|        |-t ps\_nw                        |9.8     |N    |N  |N   |parasail|
+|        |-t ps\_nw\_striped\_sse2\_128\_32|2.9     |N    |N  |SSE2|parasail|
+|        |-t ps\_nw\_striped\_32           |2.2     |N    |N  |SSE4|parasail|
+|        |-t ps\_nw\_diag\_32              |3.0     |N    |N  |SSE4|parasail|
+|        |-t ps\_nw\_scan\_32              |3.0     |N    |N  |SSE4|parasail|
+|        |-t extz2\_sse -s                 |3.0     |N    |Y  |SSE2|ksw2    |
+|        |-t extz2\_sse -s                 |2.7     |N    |Y  |SSE4|ksw2    |
+|        |-t extz2\_sse -sg                |0.96    |N    |N  |SSE2|ksw2    |
+|        |-t extz2\_sse -sg                |0.84    |N    |N  |SSE4|ksw2    |
+|16.5k   |-t gg -s                         |0.84    |N    |N  |N   |ksw2    |
+|        |-t gg                            |1.6     |Y    |N  |N   |ksw2    |
+|        |-t gg2                           |3.3     |Y    |N  |N   |ksw2    |
+|        |-t extz                          |2.0     |Y    |Y  |N   |ksw2    |
+|        |-t extz2\_sse                    |0.40    |Y    |Y  |SSE4|ksw2    |
+|        |-t extz2\_sse -g                 |0.18    |Y    |N  |SSE4|ksw2    |
 
-* The inner loop with SSE intrinsics could probably be improved. On a few
-  examples, `ksw2_gg2` is about twice as slow as `ksw2_gg`, suggesting the
-  diagonal formulation is less efficient. At the same time, `ksw2_extz2_sse` is
-  four times as fast as `ksw2_extz`, suggesting SSE works, but the speedup
-  is not as good as 8 or even 16 fold. There may be room for improvement.
+The standard DP formulation is about twice as fast as Suzuki's diagonal
+formulation (`-tgg` vs `-tgg2`), but SSE4-based diagonal formulation
+is several times faster than the standard DP. If we only want to compute one
+global alignment score, we can use 16-way parallelization throughout.  For
+extension alignment, though, we need to keep an array of 32-bit scores, which
+significantly reduces performance (`-sg` vs `-s` in the table).  KSW2 is faster
+than parasail partly because the former uses one score for all matches and one
+for all mismatches. Vectorization is harder given a generic scoring matrix.
 
-* No thorough test or benchmarking as of now.
+It is possible to further accelerate global alignment with dynamic banding as
+is implemented in [edlib][edlib]. However, it might not be as effective for
+extension alignment. Another idea is [adaptive banding][adap-band], which
+might be worth trying at some point.
 
-* No AVX implementations.
+
 
 [hs]: https://github.com/ocxtal
 [hs-eq]: https://github.com/ocxtal/diffbench

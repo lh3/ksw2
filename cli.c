@@ -54,6 +54,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
 	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
 	ez->n_cigar = 0;
+	ez->cigar = 0;
 	qlen = strlen(qseq_);
 	tlen = strlen(tseq_);
 	qseq = (uint8_t*)calloc(qlen + 33, 1); // 32 for gaba
@@ -63,8 +64,10 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	for (i = 0; i < tlen; ++i)
 		tseq[i] = seq_nt4_table[(uint8_t)tseq_[i]];
 	if (w < 0) w = qlen > tlen? qlen : tlen;
-	if (strcmp(algo, "gg") == 0)               ez->score = ksw_gg(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
-	else if (strcmp(algo, "gg2") == 0)         ez->score = ksw_gg2(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+	if (strcmp(algo, "gg") == 0) {
+		if (flag & KSW_EZ_SCORE_ONLY) ez->score = ksw_gg(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, 0, 0, 0);
+		else ez->score = ksw_gg(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+	} else if (strcmp(algo, "gg2") == 0)         ez->score = ksw_gg2(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 	else if (strcmp(algo, "gg2_sse") == 0)     ez->score = ksw_gg2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);

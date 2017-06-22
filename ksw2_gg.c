@@ -40,9 +40,9 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 		en = i + w + 1 < qlen? i + w + 1 : qlen;
 		h1 = st > 0? KSW_NEG_INF : -(gapoe + gape * i);
 		f  = st > 0? KSW_NEG_INF : -(gapoe + gapoe + gape * i);
-		off[i] = st;
-		if (n_cigar_ && cigar_) {
+		if (m_cigar_ && n_cigar_ && cigar_) {
 			uint8_t *zi = &z[(long)i * n_col];
+			off[i] = st;
 			for (j = st; j < en; ++j) {
 				// At the beginning of the loop: eh[j] = { H(i-1,j-1), E(i,j) }, f = F(i,j) and h1 = H(i,j-1)
 				// Cells are computed in the following order:
