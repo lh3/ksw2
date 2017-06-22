@@ -7,7 +7,7 @@
 
 #define KSW_EZ_SCORE_ONLY  0x1 // don't record alignment path/cigar
 #define KSW_EZ_RIGHT       0x2 // right-align gaps
-#define KSW_EZ_SIMPLE_SC   0x4 // match/mismatch only; last symbol is a wildcard
+#define KSW_EZ_GENERIC_SC  0x4 // without this flag: match/mismatch only; last symbol is a wildcard
 #define KSW_EZ_GLOBAL_ONLY 0x8 // don't record best score and ignore z-drop; significantly faster
 
 typedef struct {

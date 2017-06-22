@@ -94,7 +94,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else x1 = 0, v1 = r? q : 0;
 		if (en >= r) ((uint8_t*)y)[r] = 0, u8[r] = r? q : 0;
 		// loop fission: set scores first
-		if (flag & KSW_EZ_SIMPLE_SC) {
+		if (!(flag & KSW_EZ_GENERIC_SC)) {
 			for (t = st0; t <= en0; t += 16) {
 				__m128i sq, st, tmp, mask;
 				sq = _mm_loadu_si128((__m128i*)&sf[t]);
