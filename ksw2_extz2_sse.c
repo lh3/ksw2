@@ -240,7 +240,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				ez->mqe = H[st0], ez->mqe_t = st0;
 			if (max_H > ez->max) {
 				ez->max = max_H, ez->max_t = max_t, ez->max_q = r - max_t;
-			} else if (r - max_t > ez->max_q) {
+			} else if (max_t >= ez->max_t && r - max_t >= ez->max_q) {
 				int tl = max_t - ez->max_t, ql = (r - max_t) - ez->max_q, l;
 				l = tl > ql? tl - ql : ql - tl;
 				if (ez->max - max_H > zdrop + l * e)
