@@ -50,7 +50,8 @@ intrinsics, `ksw2_extz2_sse.c` is recommended in general. It supports global
 alignment, alignment extension with Z-drop, score-only alignment, global-only
 alignment and right-aligned CIGARs. `ksw2_gg*.c` are mostly for demonstration
 and comparison purposes. They are annotated with more comments and easier to
-understand than `ksw2_ext*.c`.
+understand than `ksw2_ext*.c`. Header file [ksw2.h](ksw2.h) gives brief
+documentations.
 
 ## Performance Analysis
 
