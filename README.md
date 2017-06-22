@@ -55,10 +55,16 @@ and comparison purposes. They are annotated with more comments and easier to
 understand than `ksw2_ext*.c`. Header file [ksw2.h](ksw2.h) gives brief
 documentations.
 
+To compile the test program `ksw-test`, just type `make`. For most x86
+compilers, this doesn't take the advantage of SSE4.1. To compile with SSE4.1
+for better performance, use `make sse4=1` instead. If you have installed
+parasail, use `make sse4=1 parasail=prefix`, where `prefix` points to the
+parasail install directory (e.g. `/usr/local`).
+
 ## Performance Analysis
 
-The following table shows timing on two pairs of sequences (both in the "test"
-directory).
+The following table shows timing on two pairs of long sequences (both in the
+"test" directory).
 
 |Data set|Command line options             |Time (s)|CIGAR|Ext|SIMD|Source  |
 |:-------|:--------------------------------|:-------|:---:|:-:|:--:|:-------|
@@ -69,10 +75,10 @@ directory).
 |        |-t ps\_nw\_striped\_32           |2.2     |N    |N  |SSE4|parasail|
 |        |-t ps\_nw\_diag\_32              |3.0     |N    |N  |SSE4|parasail|
 |        |-t ps\_nw\_scan\_32              |3.0     |N    |N  |SSE4|parasail|
-|        |-t extz2\_sse -s                 |3.0     |N    |Y  |SSE2|ksw2    |
-|        |-t extz2\_sse -s                 |2.7     |N    |Y  |SSE4|ksw2    |
 |        |-t extz2\_sse -sg                |0.96    |N    |N  |SSE2|ksw2    |
 |        |-t extz2\_sse -sg                |0.84    |N    |N  |SSE4|ksw2    |
+|        |-t extz2\_sse -s                 |3.0     |N    |Y  |SSE2|ksw2    |
+|        |-t extz2\_sse -s                 |2.7     |N    |Y  |SSE4|ksw2    |
 |16.5k   |-t gg -s                         |0.84    |N    |N  |N   |ksw2    |
 |        |-t gg                            |1.6     |Y    |N  |N   |ksw2    |
 |        |-t gg2                           |3.3     |Y    |N  |N   |ksw2    |
@@ -81,14 +87,15 @@ directory).
 |        |-t extz2\_sse -g                 |0.18    |Y    |N  |SSE4|ksw2    |
 
 The standard DP formulation is about twice as fast as Suzuki's diagonal
-formulation (`-tgg` vs `-tgg2`), but SSE4-based diagonal formulation
+formulation (`-tgg` vs `-tgg2`), but SSE-based diagonal formulation
 is several times faster than the standard DP. If we only want to compute one
 global alignment score, we can use 16-way parallelization throughout.  For
-extension alignment, though, we need to keep an array of 32-bit scores, which
-significantly reduces performance (`-sg` vs `-s`).  KSW2 is faster than
-parasail partly because the former uses one score for all matches and another
-score for all mismatches. For diagonal formulations, vectorization is more
-complex given a generic scoring matrix.
+extension alignment, though, we need to keep an array of 32-bit scores and have
+to use 4-way parallelization for part of the core loop. This significantly
+reduces performance (`-sg` vs `-s`).  KSW2 is faster than parasail partly
+because the former uses one score for all matches and another score for all
+mismatches. For diagonal formulations, vectorization is more complex given a
+generic scoring matrix.
 
 It is possible to further accelerate global alignment with dynamic banding as
 is implemented in [edlib][edlib]. However, it is not as effective for extension
