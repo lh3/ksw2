@@ -84,8 +84,8 @@ global alignment score, we can use 16-way parallelization throughout.  For
 extension alignment, though, we need to keep an array of 32-bit scores, which
 significantly reduces performance (`-sg` vs `-s`).  KSW2 is faster than
 parasail partly because the former uses one score for all matches and another
-score for all mismatches. Vectorization is harder given a generic scoring
-matrix.
+score for all mismatches. For diagonal formulations, vectorization is harder
+given a generic scoring matrix.
 
 It is possible to further accelerate global alignment with dynamic banding as
 is implemented in [edlib][edlib]. However, it might not be as effective for
