@@ -5,10 +5,11 @@
 
 #define KSW_NEG_INF -0x40000000
 
-#define KSW_EZ_SCORE_ONLY  0x1 // don't record alignment path/cigar
-#define KSW_EZ_RIGHT       0x2 // right-align gaps
-#define KSW_EZ_GENERIC_SC  0x4 // without this flag: match/mismatch only; last symbol is a wildcard
-#define KSW_EZ_GLOBAL_ONLY 0x8 // don't record best score and ignore z-drop; significantly faster
+#define KSW_EZ_SCORE_ONLY  0x01 // don't record alignment path/cigar
+#define KSW_EZ_RIGHT       0x02 // right-align gaps
+#define KSW_EZ_GENERIC_SC  0x04 // without this flag: match/mismatch only; last symbol is a wildcard
+#define KSW_EZ_GLOBAL_ONLY 0x08 // don't record best score and ignore z-drop; significantly faster
+#define KSW_EZ_DYN_BAND    0x10 // once used, ksw_extz_t::{mqe,mte} may be wrong
 
 typedef struct {
 	int max, max_q, max_t; // max extension score and coordinate

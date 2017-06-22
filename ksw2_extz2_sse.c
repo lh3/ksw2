@@ -32,12 +32,14 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	a = _mm_sub_epi8(a, z); \
 	b = _mm_sub_epi8(b, z);
 
-	int r, t, qe = q + e, n_col_, *off = 0, tlen_, qlen_, last_st, last_en;
+	int r, t, qe = q + e, n_col_, *off = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc;
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), with_max = !(flag&KSW_EZ_GLOBAL_ONLY);
 	int32_t *H = 0, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *sf, *mem, *mem2 = 0;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_, sc_mch_, sc_mis_, m1_;
 	__m128i *u, *v, *x, *y, *s, *p = 0;
+
+	if (m <= 0 || qlen <= 0 || tlen <= 0 || w < 0 || zdrop < 0) return;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
@@ -54,9 +56,12 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
 	ez->n_cigar = 0;
 
+	wl = wr = w;
 	tlen_ = (tlen + 15) / 16;
 	n_col_ = ((w + 1 < tlen? w + 1 : tlen) + 15) / 16 + 1;
 	qlen_ = (qlen + 15) / 16;
+	for (t = 1, max_sc = mat[0]; t < m * m; ++t)
+		max_sc = max_sc > mat[t]? max_sc : mat[t];
 
 	mem = (uint8_t*)kcalloc(km, tlen_ * 6 + qlen_ + 1, 16);
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
@@ -82,8 +87,8 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		// find the boundaries
 		if (st < r - qlen + 1) st = r - qlen + 1;
 		if (en > r) en = r;
-		if (st < (r-w+1)>>1) st = (r-w+1)>>1; // take the ceil
-		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor
+		if (st < (r-wr+1)>>1) st = (r-wr+1)>>1; // take the ceil
+		if (en > (r+wl)>>1) en = (r+wl)>>1; // take the floor
 		st0 = st, en0 = en;
 		st = st / 16 * 16, en = (en + 16) / 16 * 16 - 1;
 		// set boundary conditions
@@ -243,6 +248,15 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			}
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H[tlen - 1];
+			if (flag & KSW_EZ_DYN_BAND) { // update band width
+				int lq, lt, l;
+				lt = tlen - st0, lq = qlen - (r - st0);
+				l = lt < lq? lt : lq;
+				if (H[st0] + l * max_sc < ez->max - zdrop && wr > 1) --wr;
+				lt = tlen - en0, lq = qlen - (r - en0);
+				l = lt < lq? lt : lq;
+				if (H[en0] + l * max_sc < ez->max - zdrop && wl > 1) --wl;
+			}
 		} else {
 			if (r > 0) {
 				if (last_H0_t >= st0 && last_H0_t <= en0)

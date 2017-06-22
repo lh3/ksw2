@@ -54,7 +54,6 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
 	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
 	ez->n_cigar = 0;
-	ez->cigar = 0;
 	qlen = strlen(qseq_);
 	tlen = strlen(tseq_);
 	qseq = (uint8_t*)calloc(qlen + 33, 1); // 32 for gaba
@@ -143,7 +142,7 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgz:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgdz:")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
@@ -151,6 +150,7 @@ int main(int argc, char *argv[])
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
 		else if (c == 'g') flag |= KSW_EZ_GLOBAL_ONLY;
+		else if (c == 'd') flag |= KSW_EZ_DYN_BAND;
 	}
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
