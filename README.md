@@ -7,7 +7,8 @@ and optionally produces alignment paths (i.e. CIGARs) with gaps either left- or
 right-aligned.  In addition to plain implementations of the algorithms, KSW2
 also provides implementations using SSE2 and SSE4.1 intrinsics. It adopted
 [Hajime Suzuki][hs]'s [formulation][hs-eq] which enables 16-way SSE
-parallelization regardless of the maximum score of the alignment.
+parallelization for the most part, regardless of the maximum score of the
+alignment.
 
 ## Why
 
@@ -24,14 +25,15 @@ need gaps to be left-aligned when we extend to the right, while right-aligned
 when we extend to the left.
 
 Many libraries perform DP-based alignment. [KSW][klib], the predecessor of
-KSW2, implements the same set of features, but it has minor bugs and is slow
-for global alignment and alignment extension.  [edlib][edlib] is very fast but
+KSW2, implements a similar set of features, but it has minor bugs and is slow
+for global alignment and alignment extension. [edlib][edlib] is very fast but
 it does not support affine gap penalty and requires the alignment to reach the
 end of the query. [Parasail][para] and [libssa][ssa] do not produce CIGARs or
-support extension. [Opal][opal] implements inter-sequence parallelization which
-is not applicable to my use cases. [SSW][ssw] comes with local alignment only.
-[libgaba][gaba] is probably the closest to KSW2, but it still lacks a few
-subtle features such as diagonal X-drop.
+support extension. [SWIPE][SWIPE] and [Opal][opal] implement inter-sequence
+parallelization which is not applicable to my use cases. [SWPS3][swps3] and
+[SSW][ssw] come with local alignment only. [libgaba][gaba], which KSW2 learns
+from, doesn't support Z-drop. I also failed to produce desired alignments on my
+test sequences (probably due to my fault, though).
 
 ## How to use
 
@@ -85,13 +87,13 @@ global alignment score, we can use 16-way parallelization throughout.  For
 extension alignment, though, we need to keep an array of 32-bit scores, which
 significantly reduces performance (`-sg` vs `-s`).  KSW2 is faster than
 parasail partly because the former uses one score for all matches and another
-score for all mismatches. For diagonal formulations, vectorization is harder
-given a generic scoring matrix.
+score for all mismatches. For diagonal formulations, vectorization is more
+complex given a generic scoring matrix.
 
 It is possible to further accelerate global alignment with dynamic banding as
-is implemented in [edlib][edlib]. However, it might not be as effective for
-extension alignment. Another idea is [adaptive banding][adap-band], which
-might be worth trying at some point.
+is implemented in [edlib][edlib]. However, it is not as effective for extension
+alignment. Another idea is [adaptive banding][adap-band], which might be worth
+trying at some point.
 
 
 
@@ -105,3 +107,5 @@ might be worth trying at some point.
 [ssa]: https://github.com/RonnySoak/libssa
 [gaba]: https://github.com/ocxtal/libgaba
 [adap-band]: https://github.com/ocxtal/adaptivebandbench
+[swipe]: https://github.com/torognes/swipe
+[swps3]: http://lab.dessimoz.org/swps3/
