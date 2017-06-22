@@ -157,11 +157,11 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 #endif
 				__dp_code_block2;
 				tmp = _mm_cmpgt_epi8(a, zero_);
-				d = _mm_or_si128(d, _mm_and_si128(tmp, flag4_));  // d = a > 0? 1<<2 : 0
 				_mm_store_si128(&x[t], _mm_and_si128(tmp, a));
+				d = _mm_or_si128(d, _mm_and_si128(tmp, flag4_));  // d = a > 0? 1<<2 : 0
 				tmp = _mm_cmpgt_epi8(b, zero_);
-				d = _mm_or_si128(d, _mm_and_si128(tmp, flag32_)); // d = b > 0? 2<<4 : 0
 				_mm_store_si128(&y[t], _mm_and_si128(tmp, b));
+				d = _mm_or_si128(d, _mm_and_si128(tmp, flag32_)); // d = b > 0? 2<<4 : 0
 				_mm_store_si128(&pr[t], d);
 			}
 		} else { // gap right-alignment
@@ -183,11 +183,11 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 #endif
 				__dp_code_block2;
 				tmp = _mm_cmpgt_epi8(zero_, a);
-				d = _mm_or_si128(d, _mm_andnot_si128(tmp, flag4_));  // d = 0 > a? 0 : 1<<2
 				_mm_store_si128(&x[t], _mm_andnot_si128(tmp, a));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, flag4_));  // d = 0 > a? 0 : 1<<2
 				tmp = _mm_cmpgt_epi8(zero_, b);
-				d = _mm_or_si128(d, _mm_andnot_si128(tmp, flag32_)); // d = 0 > b? 0 : 2<<4
 				_mm_store_si128(&y[t], _mm_andnot_si128(tmp, b));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, flag32_)); // d = 0 > b? 0 : 2<<4
 				_mm_store_si128(&pr[t], d);
 			}
 		}
