@@ -134,7 +134,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	kfree(km, qp); kfree(km, eh);
 	if (with_cigar) {
 		if (ez->score > KSW_NEG_INF) ksw_backtrack(km, 0, z, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
-		else ksw_backtrack(km, 1, z, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+		else ksw_backtrack(km, 0, z, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		kfree(km, z); kfree(km, off);
 	}
 }
