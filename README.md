@@ -24,9 +24,10 @@ overview:
 |[libssa][ssa]   |No   |No?      |Yes       |Fast     |Fast     |N/A      |N/A      |
 |[Opal][opal]    |No   |No       |Yes       |Fast     |Fast     |Fast     |N/A      |
 |[Parasail][para]|No   |Yes      |Yes       |Fast     |Fast     |Fast     |N/A      |
+|[SeqAn][seqan]  |Yes  |Yes      |Yes       |Slow     |Slow     |Slow     |N/A      |
+|[SSW][ssw]      |Yes  |Yes      |Yes       |Fast     |N/A      |N/A      |N/A      |
 |[SWIPE][swipe]  |Yes  |No       |Yes       |Fast     |N/A?     |N/A?     |N/A      |
 |[SWPS3][swps3]  |No   |Yes      |Yes       |Fast     |N/A?     |N/A      |N/A      |
-|[SSW][ssw]      |Yes  |Yes      |Yes       |Fast     |N/A      |N/A      |N/A      |
 
 We developed KSW2 because it comes with a set of features needed for developing
 aligners. For a seed-and-extend based aligner, KSW2 can be used to close gaps
@@ -124,3 +125,4 @@ trying at some point.
 [adap-band]: https://github.com/ocxtal/adaptivebandbench
 [swipe]: https://github.com/torognes/swipe
 [swps3]: http://lab.dessimoz.org/swps3/
+[seqan]: http://seqan.de
