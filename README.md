@@ -12,28 +12,34 @@ alignment.
 
 ## Why
 
-KSW2 comes with a set of features needed for developing aligners. For a
-seed-and-extend based aligner, KSW2 can be used to close gaps between seeds.
-When there is a long gap between two adjacent seed hits, we prefer a global
-alignment but cannot force the query and reference sequences to be aligned
-because they may differ due to structural variations such as long inversions.
-KSW2 can detect poorly aligned regions with diagonal X-drop, which I call as
-Z-drop. Z-drop is like X-drop except that it does not panelize gap extensions
-and thus helps to recover long gaps. Variant callers for high-throughput
-sequencing data usually expect gaps to be left-aligned.  To achieve this, we
-need gaps to be left-aligned when we extend to the right, while right-aligned
-when we extend to the left.
+Many libraries perform DP-based alignment. The following table gives an
+overview:
 
-Many libraries perform DP-based alignment. [KSW][klib], the predecessor of
-KSW2, implements a similar set of features, but it has minor bugs and is slow
-for global alignment and alignment extension. [edlib][edlib] is very fast but
-it does not support affine gap penalty and requires the alignment to reach the
-end of the query. [Parasail][para] and [libssa][ssa] do not produce CIGARs or
-support extension. [SWIPE][SWIPE] and [Opal][opal] implement inter-sequence
-parallelization which is not applicable to my use cases. [SWPS3][swps3] and
-[SSW][ssw] come with local alignment only. [libgaba][gaba], which KSW2 learns
-from, doesn't support Z-drop. I also failed to produce desired alignments on my
-test sequences (probably due to my fault, though).
+|Library         |CIGAR|Intra-seq|Affine-gap|Local    |Global   |Glocal   |Extension|
+|:---------------|:---:|:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|
+|[edlib][edlib]  |Yes  |Yes      |No        |Very fast|Very fast|Very fast|N/A      |
+|[KSW][klib]     |Yes  |Yes      |Yes       |Fast     |Slow     |N/A      |Slow     |
+|KSW2            |Yes  |Yes      |Yes       |N/A      |Fast     |N/A      |Fast     |
+|[libgaba][gaba] |Yes  |Yes      |Yes       |N/A?     |N/A?     |N/A?     |Fast     |
+|[libssa][ssa]   |No   |No?      |Yes       |Fast     |Fast     |N/A      |N/A      |
+|[Opal][opal]    |No   |No       |Yes       |Fast     |Fast     |Fast     |N/A      |
+|[Parasail][para]|No   |Yes      |Yes       |Fast     |Fast     |Fast     |N/A      |
+|[SWIPE][swipe]  |Yes  |No       |Yes       |Fast     |N/A?     |N/A?     |N/A      |
+|[SWPS3][swps3]  |No   |Yes      |Yes       |Fast     |N/A?     |N/A      |N/A      |
+|[SSW][ssw]      |Yes  |Yes      |Yes       |Fast     |N/A      |N/A      |N/A      |
+
+We developed KSW2 because it comes with a set of features needed for developing
+aligners. For a seed-and-extend based aligner, KSW2 can be used to close gaps
+between seeds.  When there is a long gap between two adjacent seed hits, we
+prefer a global alignment but cannot force the query and reference sequences to
+be aligned because they may differ due to structural variations such as long
+inversions.  KSW2 can detect poorly aligned regions with diagonal X-drop, which
+I call as Z-drop. Z-drop is like X-drop except that it does not panelize gap
+extensions and thus helps to recover long gaps. Variant callers for
+high-throughput sequencing data usually expect gaps to be left-aligned.  To
+achieve this, we need gaps to be left-aligned when we extend to the right,
+while right-aligned when we extend to the left. Both gap placements are
+necessary.
 
 ## How to use
 
@@ -59,7 +65,9 @@ To compile the test program `ksw-test`, just type `make`. For most x86
 compilers, this doesn't take the advantage of SSE4.1. To compile with SSE4.1
 for better performance, use `make sse4=1` instead. If you have installed
 parasail, use `make sse4=1 parasail=prefix`, where `prefix` points to the
-parasail install directory (e.g. `/usr/local`).
+parasail install directory (e.g. `/usr/local`). The test program can also
+use libgaba, but I failed to produce desired alignment on the test data,
+probably due to my fault.
 
 ## Performance Analysis
 
