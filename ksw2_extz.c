@@ -11,7 +11,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
-	ez->max = 0, ez->mqe = ez->mte = KSW_NEG_INF;
+	ez->max = 0, ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
 	ez->n_cigar = 0;
 
 	// allocate memory
