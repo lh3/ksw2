@@ -114,7 +114,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 		//for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, ((uint8_t*)u)[t], ((uint8_t*)v)[t], ((uint8_t*)x)[t], ((uint8_t*)y)[t], ((uint8_t*)(p + r * n_col_))[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
-	ksw_backtrack(km, 1, (uint8_t*)p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
+	ksw_backtrack(km, 1, 0, (uint8_t*)p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
 	score = ksw_cigar2score(m, mat, q, e, query, target, *n_cigar_, *cigar_);
 	kfree(km, mem2); kfree(km, off);
 	return score;
