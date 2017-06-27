@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
-		else if (c == 'g') flag |= KSW_EZ_GLOBAL_ONLY;
+		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX;
 		else if (c == 'd') flag |= KSW_EZ_DYN_BAND;
 	}
 	if (argc - optind < 2) {
