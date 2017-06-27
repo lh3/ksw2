@@ -7,8 +7,8 @@ and optionally produces alignment paths (i.e. CIGARs) with gaps either left- or
 right-aligned.  In addition to plain implementations of the algorithms, KSW2
 also provides implementations using SSE2 and SSE4.1 intrinsics. It adopted
 [Hajime Suzuki][hs]'s [formulation][hs-eq] which enables 16-way SSE
-parallelization for the most part, regardless of the maximum score of the
-alignment.
+parallelization for the most part of the inner loop, regardless of the maximum
+score of the alignment.
 
 ## Why
 
@@ -33,14 +33,14 @@ We developed KSW2 because it comes with a set of features needed for developing
 aligners. For a seed-and-extend based aligner, KSW2 can be used to close gaps
 between seeds.  When there is a long gap between two adjacent seed hits, we
 prefer a global alignment but cannot force the query and reference sequences to
-be aligned because they may differ due to structural variations such as long
-inversions.  KSW2 can detect poorly aligned regions with diagonal X-drop, which
-I call as Z-drop. Z-drop is like X-drop except that it does not panelize gap
-extensions and thus helps to recover long gaps. Variant callers for
-high-throughput sequencing data usually expect gaps to be left-aligned.  To
-achieve this, we need gaps to be left-aligned when we extend to the right,
-while right-aligned when we extend to the left. Both gap placements are
-necessary.
+be fully aligned because they may differ due to structural variations such as long
+inversions, which may leave a long poorly aligned regions in the middle.  KSW2
+can detect such poorly regions with *diagonal X-drop*, which I call as *Z-drop*.
+Z-drop is like X-drop except that it does not panelize gap extensions and thus
+helps to recover long gaps. Variant callers for high-throughput sequencing data
+usually expect gaps to be left-aligned.  To achieve this, we need gaps to be
+left-aligned when we extend to the right, while right-aligned when we extend to
+the left. Both gap placements are necessary.
 
 ## How to use
 
@@ -78,6 +78,7 @@ The following table shows timing on two pairs of long sequences (both in the
 |Data set|Command line options             |Time (s)|CIGAR|Ext|SIMD|Source  |
 |:-------|:--------------------------------|:-------|:---:|:-:|:--:|:-------|
 |50k     |-t gg -s                         |7.3     |N    |N  |N   |ksw2    |
+|        |-t gg2 -s                        |19.8    |N    |N  |N   |ksw2    |
 |        |-t extz -s                       |9.2     |N    |Y  |N   |ksw2    |
 |        |-t ps\_nw                        |9.8     |N    |N  |N   |parasail|
 |        |-t ps\_nw\_striped\_sse2\_128\_32|2.9     |N    |N  |SSE2|parasail|
@@ -98,13 +99,13 @@ The following table shows timing on two pairs of long sequences (both in the
 The standard DP formulation is about twice as fast as Suzuki's diagonal
 formulation (`-tgg` vs `-tgg2`), but SSE-based diagonal formulation
 is several times faster than the standard DP. If we only want to compute one
-global alignment score, we can use 16-way parallelization throughout.  For
-extension alignment, though, we need to keep an array of 32-bit scores and have
-to use 4-way parallelization for part of the core loop. This significantly
-reduces performance (`-sg` vs `-s`).  KSW2 is faster than parasail partly
-because the former uses one score for all matches and another score for all
-mismatches. For diagonal formulations, vectorization is more complex given a
-generic scoring matrix.
+global alignment score, we can use 16-way parallelization in the entire inner
+loop.  For extension alignment, though, we need to keep an array of 32-bit
+scores and have to use 4-way parallelization for part of the inner loop. This
+significantly reduces performance (`-sg` vs `-s`).  KSW2 is faster than
+parasail partly because the former uses one score for all matches and another
+score for all mismatches. For diagonal formulations, vectorization is more
+complex given a generic scoring matrix.
 
 It is possible to further accelerate global alignment with dynamic banding as
 is implemented in [edlib][edlib]. However, it is not as effective for extension
