@@ -113,26 +113,6 @@ static inline void ksw_backtrack(void *km, int is_rot, int is_rev, const uint8_t
 	*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
 }
 
-static inline int ksw_cigar2score(int8_t m, const int8_t *mat, int8_t q, int8_t e, const uint8_t *query, const uint8_t *target, int n_cigar, const uint32_t *cigar)
-{
-	int i, j, k, l, score;
-	for (k = 0, score = 0, i = j = 0; k < n_cigar; ++k) {
-		int op = cigar[k] & 0xf, len = cigar[k] >> 4;
-		if (op == 0) {
-			for (l = 0; l < len; ++l)
-				score += mat[target[i + l] * m + query[j + l]];
-			i += len, j += len;
-		} else if (op == 1) {
-			score -= q + len * e;
-			j += len;
-		} else if (op == 2) {
-			score -= q + len * e;
-			i += len;
-		}
-	}
-	return score;
-}
-
 static inline void ksw_reset_extz(ksw_extz_t *ez)
 {
 	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;

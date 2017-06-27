@@ -10,7 +10,7 @@
 
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
 {
-	int r, t, n_col, n_col_, *off, score, tlen_, last_st, last_en;
+	int r, t, n_col, n_col_, *off, tlen_, last_st, last_en, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *mem, *mem2;
 	__m128i *u, *v, *x, *y, *s, *p;
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
@@ -110,13 +110,17 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			_mm_store_si128(&y[t], _mm_and_si128(b, tmp));
 			_mm_store_si128(&pr[t], d);
 		}
+		if (r > 0) {
+			if (last_H0_t >= st0 && last_H0_t <= en0)
+				H0 += ((uint8_t*)v)[last_H0_t] - (q + e);
+			else ++last_H0_t, H0 += ((uint8_t*)u)[last_H0_t] - (q + e);
+		} else H0 = ((uint8_t*)v)[0] - 2 * (q + e), last_H0_t = 0;
 		last_st = st, last_en = en;
 		//for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%x\n", r, t, ((uint8_t*)u)[t], ((uint8_t*)v)[t], ((uint8_t*)x)[t], ((uint8_t*)y)[t], ((uint8_t*)(p + r * n_col_))[t-st]); // for debugging
 	}
 	kfree(km, mem); kfree(km, qr);
 	ksw_backtrack(km, 1, 0, (uint8_t*)p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
-	score = ksw_cigar2score(m, mat, q, e, query, target, *n_cigar_, *cigar_);
 	kfree(km, mem2); kfree(km, off);
-	return score;
+	return H0;
 }
 #endif // __SSE2__
