@@ -10,9 +10,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	int32_t i, j, k, max_j = 0, gapoe = gapo + gape, n_col, *off = 0, with_cigar = !(flag&KSW_EZ_SCORE_ONLY);
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
-	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
-	ez->max = 0, ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
-	ez->n_cigar = 0;
+	ksw_reset_extz(ez);
 
 	// allocate memory
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
@@ -120,13 +118,15 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 			ez->mqe = eh[qlen].h, ez->mqe_t = i;
 		if (i == tlen - 1)
 			ez->mte = max, ez->mte_q = max_j;
-		if (max > ez->max) {
+		if (max > (int32_t)ez->max) {
 			ez->max = max, ez->max_t = i, ez->max_q = max_j;
 		} else if (max_j > ez->max_q) {
 			int tl = i - ez->max_t, ql = max_j - ez->max_q, l;
 			l = tl > ql? tl - ql : ql - tl;
-			if (ez->max - max > zdrop + l * gape)
+			if (ez->max - max > zdrop + l * gape) {
+				ez->zdropped = 1;
 				break;
+			}
 		}
 		if (i == tlen - 1 && en == qlen - 1)
 			ez->score = eh[qlen].h;
@@ -134,7 +134,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	kfree(km, qp); kfree(km, eh);
 	if (with_cigar) {
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
-		if (ez->score > KSW_NEG_INF && !(flag&KSW_EZ_EXTZ_ONLY))
+		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY))
 			ksw_backtrack(km, 0, rev_cigar, z, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else if (ez->max_t >= 0 && ez->max_q >= 0)
 			ksw_backtrack(km, 0, rev_cigar, z, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);

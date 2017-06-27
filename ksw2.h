@@ -14,7 +14,8 @@
 #define KSW_EZ_REV_CIGAR   0x40 // reverse CIGAR in the output
 
 typedef struct {
-	int max, max_q, max_t; // max extension score and coordinate
+	uint32_t max:31, zdropped:1;
+	int max_q, max_t;      // max extension coordinate
 	int mqe, mqe_t;        // max score when reaching the end of query
 	int mte, mte_q;        // max score when reaching the end of target
 	int score;             // max score reaching both ends; may be KSW_NEG_INF
@@ -130,6 +131,13 @@ static inline int ksw_cigar2score(int8_t m, const int8_t *mat, int8_t q, int8_t 
 		}
 	}
 	return score;
+}
+
+static inline void ksw_reset_extz(ksw_extz_t *ez)
+{
+	ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
+	ez->max = 0, ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
+	ez->n_cigar = 0, ez->zdropped = 0;
 }
 
 #endif
