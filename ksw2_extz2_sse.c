@@ -71,7 +71,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 
 	wl = wr = w;
 	tlen_ = (tlen + 15) / 16;
-	n_col_ = ((w + 1 < tlen? w + 1 : tlen) + 15) / 16 + 1;
+	n_col_ = ((w + 1 < tlen? (w + 1 < qlen? w + 1 : qlen): tlen) + 15) / 16 + 1;
 	qlen_ = (qlen + 15) / 16;
 	for (t = 1, max_sc = mat[0]; t < m * m; ++t)
 		max_sc = max_sc > mat[t]? max_sc : mat[t];
@@ -295,7 +295,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				} else {
 					++last_H0_t, H0 += u8[last_H0_t] - qe;
 				}
-				if (apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
+				if ((flag & KSW_EZ_APPROX_DROP) && apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
 			} else H0 = v8[0] - qe - qe, last_H0_t = 0;
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;
