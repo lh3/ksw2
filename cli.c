@@ -138,15 +138,19 @@ static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
 int main(int argc, char *argv[])
 {
 	void *km = 0;
-	int8_t a = 1, b = 1, q = 1, e = 1;
+	int8_t a = 1, b = 2, q = 2, e = 1;
 	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 100;
 	char *algo = "extz";
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgdz:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgdz:A:B:O:E:")) >= 0) {
 		if (c == 't') algo = optarg;
+		else if (c == 'A') a = atoi(optarg);
+		else if (c == 'B') b = atoi(optarg);
+		else if (c == 'O') q = atoi(optarg);
+		else if (c == 'E') e = atoi(optarg);
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'z') zdrop = atoi(optarg);
@@ -164,6 +168,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -z INT      Z-drop [%d]\n", zdrop);
 		fprintf(stderr, "  -r          gap right alignment\n");
 		fprintf(stderr, "  -s          score only\n");
+		fprintf(stderr, "  -A INT      match score [%d]\n", a);
+		fprintf(stderr, "  -B INT      mismatch penalty [%d]\n", b);
+		fprintf(stderr, "  -O INT      gap open penalty [%d]\n", q);
+		fprintf(stderr, "  -E INT      gap extension penalty [%d]\n", e);
 		return 1;
 	}
 #ifdef HAVE_KALLOC
