@@ -172,6 +172,39 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		v1_  = _mm_cvtsi32_si128((uint8_t)v1);
 		st_ = st / 16, en_ = en / 16;
 		if (!with_cigar) { // score only
+			for (t = st_; t <= en_; ++t) {
+				__m128i z, a, b, a2, b2, xt1, x2t1, vt1, ut, tmp;
+				__dp_code_block1;
+#ifdef __SSE4_1__
+				z = _mm_max_epi8(z, a);
+				z = _mm_max_epi8(z, b);
+				z = _mm_max_epi8(z, a2);
+				z = _mm_max_epi8(z, b2);
+				__dp_code_block2; // save u[] and v[]; update a, b, a2 and b2
+				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_max_epi8(a,  zero_), qe_));
+				_mm_store_si128(&y[t],  _mm_sub_epi8(_mm_max_epi8(b,  zero_), qe_));
+				_mm_store_si128(&x2[t], _mm_sub_epi8(_mm_max_epi8(a2, zero_), qe2_));
+				_mm_store_si128(&y2[t], _mm_sub_epi8(_mm_max_epi8(b2, zero_), qe2_));
+#else
+				tmp = _mm_cmpgt_epi8(a,  z);
+				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, a));
+				tmp = _mm_cmpgt_epi8(b,  z);
+				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, b));
+				tmp = _mm_cmpgt_epi8(a2, z);
+				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, a2));
+				tmp = _mm_cmpgt_epi8(b2, z);
+				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, b2));
+				__dp_code_block2;
+				tmp = _mm_cmpgt_epi8(a, zero_);
+				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_and_si128(tmp, a),  qe_));
+				tmp = _mm_cmpgt_epi8(b, zero_);
+				_mm_store_si128(&y[t],  _mm_sub_epi8(_mm_and_si128(tmp, b),  qe_));
+				tmp = _mm_cmpgt_epi8(a2, zero_);
+				_mm_store_si128(&x2[t], _mm_sub_epi8(_mm_and_si128(tmp, a2), qe2_));
+				tmp = _mm_cmpgt_epi8(b2, zero_);
+				_mm_store_si128(&y2[t], _mm_sub_epi8(_mm_and_si128(tmp, b2), qe2_));
+#endif
+			}
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
 			__m128i *pr = p + r * n_col_ - st_;
 			off[r] = st;
@@ -228,6 +261,60 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_store_si128(&pr[t], d);
 			}
 		} else { // gap right-alignment
+			__m128i *pr = p + r * n_col_ - st_;
+			off[r] = st;
+			if (en0 < r && en0 < tlen - 1) { // to avoid backtracking out of the band; this assumes a fixed band
+				int8_t a, a2, z = ((uint8_t*)s)[en0];
+				a = x8[en0-1] + v8[en0-1];
+				p_en0 = a >= z? 1 : 0;
+				z = a >= z? a : z;
+				p_en0 |= a - (z - q) >= 0? 1<<4 : 0;
+				a2 = x28[en0-1] + v8[en0-1];
+				p_en0 = a2 >= z? 3 : p_en0;
+				z = a2 >= z? a2 : z;
+				p_en0 |= a2 - (z - q2) >= 0? 1<<6 : 0;
+			}
+			for (t = st_; t <= en_; ++t) {
+				__m128i d, z, a, b, a2, b2, xt1, x2t1, vt1, ut, tmp;
+				__dp_code_block1;
+#ifdef __SSE4_1__
+				d = _mm_andnot_si128(_mm_cmpgt_epi8(z, a), _mm_set1_epi8(1));    // d = z > a?  0 : 1
+				z = _mm_max_epi8(z, a);
+				d = _mm_blendv_epi8(_mm_set1_epi8(2), d, _mm_cmpgt_epi8(z, b));  // d = z > b?  d : 2
+				z = _mm_max_epi8(z, b);
+				d = _mm_blendv_epi8(_mm_set1_epi8(3), d, _mm_cmpgt_epi8(z, a2)); // d = z > a2? d : 3
+				z = _mm_max_epi8(z, a2);
+				d = _mm_blendv_epi8(_mm_set1_epi8(4), d, _mm_cmpgt_epi8(z, b2)); // d = z > b2? d : 4
+				z = _mm_max_epi8(z, b2);
+#else // we need to emulate SSE4.1 intrinsics _mm_max_epi8() and _mm_blendv_epi8()
+				tmp = _mm_cmpgt_epi8(z, a);
+				d = _mm_andnot_si128(tmp, _mm_set1_epi8(1));
+				z = _mm_or_si128(_mm_and_si128(tmp, z), _mm_andnot_si128(tmp, a));
+				tmp = _mm_cmpgt_epi8(z, b);
+				d = _mm_or_si128(_mm_and_si128(tmp, d), _mm_andnot_si128(tmp, _mm_set1_epi8(2)));
+				z = _mm_or_si128(_mm_and_si128(tmp, z), _mm_andnot_si128(tmp, b));
+				tmp = _mm_cmpgt_epi8(z, a2);
+				d = _mm_or_si128(_mm_and_si128(tmp, d), _mm_andnot_si128(tmp, _mm_set1_epi8(3)));
+				z = _mm_or_si128(_mm_and_si128(tmp, z), _mm_andnot_si128(tmp, a2));
+				tmp = _mm_cmpgt_epi8(z, b2);
+				d = _mm_or_si128(_mm_and_si128(tmp, d), _mm_andnot_si128(tmp, _mm_set1_epi8(4)));
+				z = _mm_or_si128(_mm_and_si128(tmp, z), _mm_andnot_si128(tmp, b2));
+#endif
+				__dp_code_block2;
+				tmp = _mm_cmpgt_epi8(zero_, a);
+				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_andnot_si128(tmp, a),  qe_));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, _mm_set1_epi8(0x08))); // d = a > 0? 1<<3 : 0
+				tmp = _mm_cmpgt_epi8(zero_, b);
+				_mm_store_si128(&y[t],  _mm_sub_epi8(_mm_andnot_si128(tmp, b),  qe_));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, _mm_set1_epi8(0x10))); // d = b > 0? 1<<4 : 0
+				tmp = _mm_cmpgt_epi8(zero_, a2);
+				_mm_store_si128(&x2[t], _mm_sub_epi8(_mm_andnot_si128(tmp, a2), qe2_));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, _mm_set1_epi8(0x20))); // d = a > 0? 1<<5 : 0
+				tmp = _mm_cmpgt_epi8(zero_, b2);
+				_mm_store_si128(&y2[t], _mm_sub_epi8(_mm_andnot_si128(tmp, b2), qe2_));
+				d = _mm_or_si128(d, _mm_andnot_si128(tmp, _mm_set1_epi8(0x40))); // d = b > 0? 1<<6 : 0
+				_mm_store_si128(&pr[t], d);
+			}
 		}
 		if (with_cigar && en0 < r && en0 < tlen - 1) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
 		if (!approx_max) { // find the exact max with a 32-bit score array

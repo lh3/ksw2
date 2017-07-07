@@ -114,34 +114,44 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 				f2 = f2 > h2? f2 : h2;
 				zi[j - st] = d; // z[i,j] keeps h for the current cell and e/f for the next cell
 			}
-		} else { // TODO: right alignment not working!
-			/*
+		} else {
 			uint8_t *zi = &z[(long)i * n_col];
 			off[i] = st;
 			for (j = st; j <= en; ++j) {
 				eh_t *p = &eh[j];
-				int32_t h = p->h, e = p->e;
+				int32_t h = p->h, h2, e = p->e, e2 = p->e2;
 				uint8_t d; // direction
 				p->h = h1;
 				h += q[j];
-				d = h > e? 0 : 1;
-				h = h > e? h : e;
-				d = h > f? d : 2;
-				h = h > f? h : f;
+				d = h > e?  0 : 1;
+				h = h > e?  h : e;
+				d = h > f?  d : 2;
+				h = h > f?  h : f;
+				d = h > e2? d : 3;
+				h = h > e2? h : e2;
+				d = h > f2? d : 4;
+				h = h > f2? h : f2;
 				h1 = h;
-				max_j = max >= h? max_j : j;
-				max   = max >= h? max   : h;
+				max_j = max > h? max_j : j;
+				max   = max > h? max   : h;
 				h -= gapoe;
 				e -= gape;
-				d |= e >= h? 0x08 : 0;
+				d |= e >= h? 1<<3 : 0;
 				e  = e >= h? e    : h;
 				p->e = e;
 				f -= gape;
-				d |= f >= h? 0x10 : 0; // if we want to halve the memory, use one bit only, instead of two
+				d |= f >= h? 1<<4 : 0; // if we want to halve the memory, use one bit only, instead of two
 				f  = f >= h? f    : h;
+				h2 = h1 - gapoe2;
+				e2-= gape2;
+				d |= e2 >= h2? 1<<5 : 0;
+				e2 = e2 >= h2? e2 : h2;
+				p->e2 = e2;
+				f2-= gape2;
+				d |= f2 >= h2? 1<<6 : 0;
+				f2 = f2 >= h2? f2 : h2;
 				zi[j - st] = d; // z[i,j] keeps h for the current cell and e/f for the next cell
 			}
-			*/
 		}
 		eh[j].h = h1, eh[j].e = KSW_NEG_INF;
 		// update ez

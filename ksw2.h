@@ -10,7 +10,6 @@
 #define KSW_EZ_GENERIC_SC  0x04 // without this flag: match/mismatch only; last symbol is a wildcard
 #define KSW_EZ_APPROX_MAX  0x08 // approximate max; this is faster with sse
 #define KSW_EZ_APPROX_DROP 0x10 // approximate Z-drop; faster with sse
-#define KSW_EZ_DYN_BAND    0x20 // once used, ksw_extz_t::{mqe,mte} may be wrong
 #define KSW_EZ_EXTZ_ONLY   0x40 // only perform extension
 #define KSW_EZ_REV_CIGAR   0x80 // reverse CIGAR in the output
 

@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgdz:A:B:O:E:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
@@ -156,7 +156,6 @@ int main(int argc, char *argv[])
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
 		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
-		else if (c == 'd') flag |= KSW_EZ_DYN_BAND;
 		else if (c == 'A') a = atoi(optarg);
 		else if (c == 'B') b = atoi(optarg);
 		else if (c == 'O') {

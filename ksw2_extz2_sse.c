@@ -274,15 +274,6 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			if (apply_zdrop(ez, max_H, r, max_t, zdrop, e)) break;
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H[tlen - 1];
-			if (flag & KSW_EZ_DYN_BAND & 0) { // FIXME: don't use - buggy!
-				int lq, lt, l;
-				lt = tlen - st0, lq = qlen - (r - st0);
-				l = lt < lq? lt : lq;
-				if (H[st0] + l * max_sc < ez->max - zdrop && wr > 1) --wr;
-				lt = tlen - en0, lq = qlen - (r - en0);
-				l = lt < lq? lt : lq;
-				if (H[en0] + l * max_sc < ez->max - zdrop && wl > 1) --wl;
-			}
 		} else { // find approximate max; Z-drop might be inaccurate, too.
 			if (r > 0) {
 				if (last_H0_t >= st0 && last_H0_t <= en0 && last_H0_t + 1 >= st0 && last_H0_t + 1 <= en0) {
