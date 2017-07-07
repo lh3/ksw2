@@ -72,9 +72,9 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 				a -= z;
 				b -= z;
 				x1 = x[t];              // x1   = x(r-1,t) (set for the next iteration)
-				d   |= a > 0? 1<<2 : 0;
+				d   |= a > 0? 0x08 : 0;
 				x[t] = a > 0? a    : 0; // x[t] = x(r,t)
-				d   |= b > 0? 2<<4 : 0;
+				d   |= b > 0? 0x10 : 0;
 				y[t] = b > 0? b    : 0; // y[t] = y(r,t)
 				pr[t - st] = d;
 			}

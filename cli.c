@@ -47,7 +47,8 @@ static void ksw_gen_simple_mat(int m, int8_t *mat, int8_t a, int8_t b)
 		mat[(m - 1) * m + j] = 0;
 }
 
-static void global_aln(const char *algo, void *km, const char *qseq_, const char *tseq_, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez)
+static void global_aln(const char *algo, void *km, const char *qseq_, const char *tseq_, int8_t m, const int8_t *mat, int8_t q, int8_t e, int8_t q2, int8_t e2,
+					   int w, int zdrop, int flag, ksw_extz_t *ez)
 {
 	int i, qlen, tlen;
 	uint8_t *qseq, *tseq;
@@ -73,6 +74,8 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "gg2_sse") == 0)     ez->score = ksw_gg2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
@@ -138,40 +141,44 @@ static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
 int main(int argc, char *argv[])
 {
 	void *km = 0;
-	int8_t a = 1, b = 1, q = 1, e = 1;
-	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 100;
-	char *algo = "extz";
+	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 13, e2 = 1;
+	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = -1;
+	char *algo = "extd", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgdz:A:B:O:E:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:")) >= 0) {
 		if (c == 't') algo = optarg;
-		else if (c == 'A') a = atoi(optarg);
-		else if (c == 'B') b = atoi(optarg);
-		else if (c == 'O') q = atoi(optarg);
-		else if (c == 'E') e = atoi(optarg);
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
-		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX;
-		else if (c == 'd') flag |= KSW_EZ_DYN_BAND;
+		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
+		else if (c == 'A') a = atoi(optarg);
+		else if (c == 'B') b = atoi(optarg);
+		else if (c == 'O') {
+			q = strtol(optarg, &s, 10);
+			if (*s == ',') q2 = strtol(s+1, &s, 10);
+		} else if (c == 'E') {
+			e = strtol(optarg, &s, 10);
+			if (*s == ',') e2 = strtol(s+1, &s, 10);
+		}
 	}
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -t STR      algorithm: gg, gg2, gg2_sse, gg2_sse_u, extz, extz2_sse, extz2_sse_u [%s]\n", algo);
-		fprintf(stderr, "  -R INT      repeat INT times (for benchmarking) [1]\n");
-		fprintf(stderr, "  -w INT      band width [inf]\n");
-		fprintf(stderr, "  -z INT      Z-drop [%d]\n", zdrop);
-		fprintf(stderr, "  -r          gap right alignment\n");
-		fprintf(stderr, "  -s          score only\n");
-		fprintf(stderr, "  -A INT      match score [%d]\n", a);
-		fprintf(stderr, "  -B INT      mismatch penalty [%d]\n", b);
-		fprintf(stderr, "  -O INT      gap open penalty [%d]\n", q);
-		fprintf(stderr, "  -E INT      gap extension penalty [%d]\n", e);
+		fprintf(stderr, "  -t STR        algorithm: gg, gg2, gg2_sse, extz, extz2_sse, extd, extd2_sse [%s]\n", algo);
+		fprintf(stderr, "  -R INT        repeat INT times (for benchmarking) [1]\n");
+		fprintf(stderr, "  -w INT        band width [inf]\n");
+		fprintf(stderr, "  -z INT        Z-drop [%d]\n", zdrop);
+		fprintf(stderr, "  -r            gap right alignment\n");
+		fprintf(stderr, "  -s            score only\n");
+		fprintf(stderr, "  -A INT        match score [%d]\n", a);
+		fprintf(stderr, "  -B INT        mismatch penalty [%d]\n", b);
+		fprintf(stderr, "  -O INT[,INT]  gap open penalty [%d,%d]\n", q, q2);
+		fprintf(stderr, "  -E INT[,INT]  gap extension penalty [%d,%d]\n", e, e2);
 		return 1;
 	}
 #ifdef HAVE_KALLOC
@@ -183,7 +190,7 @@ int main(int argc, char *argv[])
 	fp[1] = gzopen(argv[optind+1], "r");
 
 	if (fp[0] == 0 && fp[1] == 0) {
-		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, w, zdrop, flag, &ez);
+		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
 		print_aln("first", "second", &ez);
 	} else if (fp[0] && fp[1]) {
 		kseq_t *ks[2];
@@ -193,7 +200,7 @@ int main(int argc, char *argv[])
 			while (kseq_read(ks[0]) > 0) {
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
-					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, w, zdrop, flag, &ez);
+					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
 				print_aln(ks[0]->name.s, ks[1]->name.s, &ez);
 			}
 		}

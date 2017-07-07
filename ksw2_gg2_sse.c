@@ -13,15 +13,15 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 	int r, t, n_col, n_col_, *off, tlen_, last_st, last_en, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *mem, *mem2;
 	__m128i *u, *v, *x, *y, *s, *p;
-	__m128i q_, qe2_, zero_, flag1_, flag2_, flag4_, flag32_;
+	__m128i q_, qe2_, zero_, flag1_, flag2_, flag8_, flag16_;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
 	qe2_    = _mm_set1_epi8((q + e) * 2);
-	flag1_  = _mm_set1_epi8(1<<0);
-	flag2_  = _mm_set1_epi8(2<<0);
-	flag4_  = _mm_set1_epi8(1<<2);
-	flag32_ = _mm_set1_epi8(2<<4);
+	flag1_  = _mm_set1_epi8(1);
+	flag2_  = _mm_set1_epi8(2);
+	flag8_  = _mm_set1_epi8(0x08);
+	flag16_ = _mm_set1_epi8(0x10);
 
 	n_col = w + 1 < tlen? w + 1 : tlen; // number of columns in the backtrack matrix
 	tlen_ = (tlen + 15) / 16;
@@ -103,10 +103,10 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 			a = _mm_sub_epi8(a, z);
 			b = _mm_sub_epi8(b, z);
 			tmp = _mm_cmpgt_epi8(a, zero_);
-			d = _mm_or_si128(d, _mm_and_si128(flag4_,  tmp));
+			d = _mm_or_si128(d, _mm_and_si128(flag8_,  tmp));
 			_mm_store_si128(&x[t], _mm_and_si128(a, tmp));
 			tmp = _mm_cmpgt_epi8(b, zero_);
-			d = _mm_or_si128(d, _mm_and_si128(flag32_, tmp));
+			d = _mm_or_si128(d, _mm_and_si128(flag16_, tmp));
 			_mm_store_si128(&y[t], _mm_and_si128(b, tmp));
 			_mm_store_si128(&pr[t], d);
 		}

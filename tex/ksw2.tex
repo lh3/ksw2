@@ -102,7 +102,14 @@ H_{ij}-H_{i-1,j-1}
 \end{eqnarray*}
 and
 \[H_{ij}-H_{i-1,j-1}=u'_{ij}+v'_{i-1,j}=v'_{ij}+u'_{i,j-1}\]
-We can derive the recursive equation for $u'_{ij}$ and $v'_{ij}$.
+We can derive the recursive equation for $u'_{ij}$ and $v'_{ij}$:
+\begin{eqnarray*}
+z'_{ij}&=&\max\{S(i,j),x'_{i-1,j}+v'_{i-1,j},y'_{i,j-1}+u'_{i,j-1}\}\\
+u'_{ij}&=&z'_{ij}-v'_{i-1,j}\\
+v'_{ij}&=&z'_{ij}-u'_{i,j-1}\\
+x'_{ij}&=&\max\{0,x'_{i-1,j}+v'_{i-1,j}-z'_{ij}+q\}-q-e\\
+y'_{ij}&=&\max\{0,y'_{i,j-1}+u'_{i,j-1}-z'_{ij}+q\}-q-e
+\end{eqnarray*}
 
 From eq.~(\ref{eq:x}) we can infer that $x'_{ij}\ge-q-e$ and similarly
 $y'_{ij}\ge-q-e$. We further have:
@@ -166,6 +173,70 @@ Putting these together:
 \[u_{r-1,r}=u''_{r,-1}=H_{r,-1}-H_{r-1,-1}+q+e=\left\{\begin{array}{ll}
   q & (r>0) \\
   0 & (r=0)
+\end{array}\right.\]
+
+\section{Alignment with dual affine-gap penalties}
+
+\subsection{Green's formulation}
+
+\begin{eqnarray*}
+H_{ij} &=& \max\{H_{i-1,j-1}+S(i,j),E'_{i-1,j},F'_{i,j-1},\tilde{E}'_{i-1,j},\tilde{F}'_{i,j-1}\}\\
+E'_{ij}&=& \max\{H_{ij}-q,E'_{i-1,j}\}-e\\
+F'_{ij}&=& \max\{H_{ij}-q,F'_{i,j-1}\}-e\\
+\tilde{E}'_{ij}&=& \max\{H_{ij}-\tilde{q},\tilde{E}'_{i-1,j}\}-\tilde{e}\\
+\tilde{F}'_{ij}&=& \max\{H_{ij}-\tilde{q},\tilde{F}'_{i,j-1}\}-\tilde{e}
+\end{eqnarray*}
+The initial conditions are:
+\begin{eqnarray*}
+H_{-1,j}&=&
+  \left\{\begin{array}{ll}
+    0 & (j=-1)\\
+	\max\{-q-(j+1)\cdot e,-\tilde{q}-(j+1)\cdot\tilde{e}\} & (0\le j<\ell_q)
+  \end{array}\right.\\
+H_{i,-1}&=&
+  \left\{\begin{array}{ll}
+    0 & (i=-1)\\
+	\max\{-q-(i+1)\cdot e,-\tilde{q}-(i+1)\cdot\tilde{e}\} & (0\le i<\ell_t)
+  \end{array}\right.\\
+E'_{-1,j}&=&E_{0,j}=H_{-1,j}-q-e\\
+F'_{i,-1}&=&F_{i,0}=H_{i,-1}-q-e\\
+\tilde{E}'_{-1,j}&=&\tilde{E}_{0,j}=H_{-1,j}-\tilde{q}-\tilde{e}\\
+\tilde{F}'_{i,-1}&=&\tilde{F}_{i,0}=H_{i,-1}-\tilde{q}-\tilde{e}
+\end{eqnarray*}
+
+\subsection{Suzuki's formulation}
+
+\begin{eqnarray*}
+z'_{ij}&=&\max\{S(i,j),x'_{i-1,j}+v'_{i-1,j},y'_{i,j-1}+u'_{i,j-1},\\
+&&\tilde{x}'_{i-1,j}+v'_{i-1,j},\tilde{y}'_{i,j-1}+u'_{i,j-1}\}\\
+u'_{ij}&=&z'_{ij}-v'_{i-1,j}\\
+v'_{ij}&=&z'_{ij}-u'_{i,j-1}\\
+x'_{ij}&=&\max\{0,x'_{i-1,j}+v'_{i-1,j}-z'_{ij}+q\}-q-e\\
+y'_{ij}&=&\max\{0,y'_{i,j-1}+u'_{i,j-1}-z'_{ij}+q\}-q-e\\
+\tilde{x}'_{ij}&=&\max\{0,\tilde{x}'_{i-1,j}+v'_{i-1,j}-z'_{ij}+\tilde{q}\}-\tilde{q}-\tilde{e}\\
+\tilde{y}'_{ij}&=&\max\{0,\tilde{y}'_{i,j-1}+u'_{i,j-1}-z'_{ij}+\tilde{q}\}-\tilde{q}-\tilde{e}
+\end{eqnarray*}
+In the rotated coordinate:
+\begin{eqnarray*}
+z_{rt}&=&\max\{S(t,r-t),x_{r-1,t-1}+v_{r-1,t-1},y_{r-1,t}+u_{r-1i,t},\\
+&&\tilde{x}_{r-1,t-1}+v_{r-1,t-1},\tilde{y}_{r-1,t}+u_{r-1,t}\}\\
+u_{rt}&=&z_{rt}-v_{r-1,t-1}\\
+v_{rt}&=&z_{rt}-u_{r-1,t}\\
+x_{rt}&=&\max\{0,x_{r-1,t-1}+v_{r-1,t-1}-z_{rt}+q\}-q-e\\
+y_{rt}&=&\max\{0,y_{r-1,t}+u_{r-1,t}-z_{rt}+q\}-q-e\\
+\tilde{x}_{rt}&=&\max\{0,\tilde{x}_{r-1,t-1}+v_{r-1,t-1}-z_{rt}+\tilde{q}\}-\tilde{q}-\tilde{e}\\
+\tilde{y}_{rt}&=&\max\{0,\tilde{y}_{r-1,t}+u_{r-1,t}-z_{rt}+\tilde{q}\}-\tilde{q}-\tilde{e}
+\end{eqnarray*}
+By definition, it is easy to see the initial conditions except $u$ and $v$:
+\[x_{r-1,-1}=x'_{-1,r}=E'_{-1,r}-H_{-1,r}=-q-e\]
+\[y_{r-1,r}=y'_{r,-1}=F'_{r,-1}-H_{r,-1}=-q-e\]
+\[\tilde{x}_{r-1,-1}=-\tilde{q}-\tilde{e}\]
+\[\tilde{y}_{r-1,-1}=-\tilde{q}-\tilde{e}\]
+\[v_{r-1,-1}=H_{-1,r}-H_{-1,r-1}=\left\{\begin{array}{ll}
+\max\{-q-e,-\tilde{q}-\tilde{e}\} & (r=0)\\
+-e & (r<\lceil\frac{\tilde{q}-q}{e-\tilde{e}}-1\rceil)\\
+r(e-\tilde{e})-(\tilde{q}-q)-\tilde{e} & (r=\lceil\frac{\tilde{q}-q}{e-\tilde{e}}-1\rceil)\\
+-\tilde{e} & (r>\lceil\frac{\tilde{q}-q}{e-\tilde{e}}-1\rceil)
 \end{array}\right.\]
 
 \end{document}
