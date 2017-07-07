@@ -130,4 +130,22 @@ static inline void ksw_reset_extz(ksw_extz_t *ez)
 	ez->n_cigar = 0, ez->zdropped = 0;
 }
 
+static inline int ksw_apply_zdrop(ksw_extz_t *ez, int is_rot, int32_t H, int a, int b, int zdrop, int8_t e)
+{
+	int r, t;
+	if (is_rot) r = a, t = b;
+	else r = a + b, t = a;
+	if (H > (int32_t)ez->max) {
+		ez->max = H, ez->max_t = t, ez->max_q = r - t;
+	} else if (t >= ez->max_t && r - t >= ez->max_q) {
+		int tl = t - ez->max_t, ql = (r - t) - ez->max_q, l;
+		l = tl > ql? tl - ql : ql - tl;
+		if (zdrop >= 0 && ez->max - H > zdrop + l * e) {
+			ez->zdropped = 1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 #endif

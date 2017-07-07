@@ -8,21 +8,6 @@
 #include <smmintrin.h>
 #endif
 
-static inline int apply_zdrop(ksw_extz_t *ez, int32_t H, int r, int t, int zdrop, int8_t e)
-{
-	if (H > (int32_t)ez->max) {
-		ez->max = H, ez->max_t = t, ez->max_q = r - t;
-	} else if (t >= ez->max_t && r - t >= ez->max_q) {
-		int tl = t - ez->max_t, ql = (r - t) - ez->max_q, l;
-		l = tl > ql? tl - ql : ql - tl;
-		if (ez->max - H > zdrop + l * e) {
-			ez->zdropped = 1;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez)
 {
 #define __dp_code_block1 \
@@ -54,7 +39,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	__m128i q_, qe2_, zero_, flag1_, flag2_, flag8_, flag16_, sc_mch_, sc_mis_, m1_;
 	__m128i *u, *v, *x, *y, *s, *p = 0;
 
-	if (m <= 0 || qlen <= 0 || tlen <= 0 || w < 0 || zdrop < 0) return;
+	if (m <= 0 || qlen <= 0 || tlen <= 0 || w < 0) return;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
@@ -271,7 +256,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				ez->mte = H[en0], ez->mte_q = r - en;
 			if (r - st0 == qlen - 1 && H[st0] > ez->mqe)
 				ez->mqe = H[st0], ez->mqe_t = st0;
-			if (apply_zdrop(ez, max_H, r, max_t, zdrop, e)) break;
+			if (ksw_apply_zdrop(ez, 1, max_H, r, max_t, zdrop, e)) break;
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H[tlen - 1];
 		} else { // find approximate max; Z-drop might be inaccurate, too.
@@ -286,7 +271,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				} else {
 					++last_H0_t, H0 += u8[last_H0_t] - qe;
 				}
-				if ((flag & KSW_EZ_APPROX_DROP) && apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
+				if ((flag & KSW_EZ_APPROX_DROP) && ksw_apply_zdrop(ez, 1, H0, r, last_H0_t, zdrop, e)) break;
 			} else H0 = v8[0] - qe - qe, last_H0_t = 0;
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;

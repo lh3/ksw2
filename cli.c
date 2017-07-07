@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 {
 	void *km = 0;
 	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 13, e2 = 1;
-	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 1000;
+	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = -1;
 	char *algo = "extd", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;

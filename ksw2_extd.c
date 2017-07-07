@@ -12,7 +12,6 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	ksw_reset_extz(ez);
-	if (gapo >= gapo2 || gape <= gape2) return;
 
 	// allocate memory
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
@@ -159,16 +158,7 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 			ez->mqe = eh[qlen].h, ez->mqe_t = i;
 		if (i == tlen - 1)
 			ez->mte = max, ez->mte_q = max_j;
-		if (max > (int32_t)ez->max) {
-			ez->max = max, ez->max_t = i, ez->max_q = max_j;
-		} else if (max_j > ez->max_q) {
-			int tl = i - ez->max_t, ql = max_j - ez->max_q, l;
-			l = tl > ql? tl - ql : ql - tl;
-			if (ez->max - max > zdrop + l * gape) {
-				ez->zdropped = 1;
-				break;
-			}
-		}
+		if (ksw_apply_zdrop(ez, 0, max, i, max_j, zdrop, gape2)) break;
 		if (i == tlen - 1 && en == qlen - 1)
 			ez->score = eh[qlen].h;
 	}
