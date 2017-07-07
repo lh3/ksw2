@@ -12,6 +12,7 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	ksw_reset_extz(ez);
+	if (gapo >= gapo2 || gape <= gape2) return;
 
 	// allocate memory
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
@@ -31,21 +32,24 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	// fill the first row
 	eh[0].h = 0, eh[0].e = -gapoe - gapoe, eh[0].e2 = -gapoe2 - gapoe2;
 	for (j = 1; j <= qlen && j <= w; ++j) {
+		int tmp;
 		eh[j].h = -(gapo + gape * j) > -(gapo2 + gape2 * j)? -(gapo + gape * j) : -(gapo2 + gape2 * j);
-		eh[j].e = -(gapoe + gapoe + gape * j);
-		eh[j].e2 = -(gapoe2 + gapoe2 + gape2 * j);
+		tmp = -(gapoe + gape * j) > -(gapoe2 + gape2 * j)? -(gapoe + gape * j) : -(gapoe2 + gape2 * j);
+		eh[j].e = tmp - gapoe;
+		eh[j].e2 = tmp - gapoe2;
 	}
 	for (; j <= qlen; ++j) eh[j].h = eh[j].e = eh[j].e2 = KSW_NEG_INF; // everything is -inf outside the band
 
 	// DP loop
 	for (i = 0; i < tlen; ++i) { // target sequence is in the outer loop
-		int32_t f, f2, h1, st, en, max = KSW_NEG_INF;
+		int32_t f, f2, h1, st, en, max = KSW_NEG_INF, tmp;
 		int8_t *q = &qp[target[i] * qlen];
 		st = i > w? i - w : 0;
 		en = i + w < qlen - 1? i + w : qlen - 1;
-		h1 = st > 0? KSW_NEG_INF : -(gapoe + gape * i) > -(gapoe2 + gape2 * i)? -(gapoe + gape * i) : -(gapoe2 + gape2 * i);
-		f  = st > 0? KSW_NEG_INF : -(gapoe + gapoe + gape * i);
-		f2 = st > 0? KSW_NEG_INF : -(gapoe2 + gapoe2 + gape2 * i);
+		tmp = -(gapoe + gape * i) > -(gapoe2 + gape2 * i)? -(gapoe + gape * i) : -(gapoe2 + gape2 * i);
+		h1 = st > 0? KSW_NEG_INF : tmp;
+		f  = st > 0? KSW_NEG_INF : tmp - gapoe;
+		f2 = st > 0? KSW_NEG_INF : tmp - gapoe2;
 		if (!with_cigar) {
 			for (j = st; j <= en; ++j) {
 				eh_t *p = &eh[j];

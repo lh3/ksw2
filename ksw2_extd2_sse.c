@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "ksw2.h"
 
 #ifdef __SSE2__
@@ -56,20 +57,21 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	a2= _mm_sub_epi8(a2, tmp); \
 	b2= _mm_sub_epi8(b2, tmp);
 
-	int r, t, qe = q + e, n_col_, *off = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc;
+	int r, t, qe = q + e, n_col_, *off = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc, long_thres, long_diff;
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), approx_max = !!(flag&KSW_EZ_APPROX_MAX);
 	int32_t *H = 0, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *sf, *mem, *mem2 = 0;
-	__m128i q_, q2_, qe2_, qe22_, zero_, sc_mch_, sc_mis_, m1_;
+	__m128i q_, q2_, qe_, qe2_, zero_, sc_mch_, sc_mis_, m1_;
 	__m128i *u, *v, *x, *y, *x2, *y2, *s, *p = 0;
 
 	if (m <= 0 || qlen <= 0 || tlen <= 0 || w < 0 || zdrop < 0) return;
+	if (q >= q2 || e <= e2 || q + e >= q2 + e2) return;
 
 	zero_   = _mm_set1_epi8(0);
 	q_      = _mm_set1_epi8(q);
 	q2_     = _mm_set1_epi8(q2);
-	qe2_    = _mm_set1_epi8((q + e) * 2);
-	qe22_   = _mm_set1_epi8((q2 + e2) * 2);
+	qe_     = _mm_set1_epi8(q + e);
+	qe2_    = _mm_set1_epi8(q2 + e2);
 	sc_mch_ = _mm_set1_epi8(mat[0]);
 	sc_mis_ = _mm_set1_epi8(mat[1]);
 	m1_     = _mm_set1_epi8(m - 1); // wildcard
@@ -83,10 +85,21 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	for (t = 1, max_sc = mat[0]; t < m * m; ++t)
 		max_sc = max_sc > mat[t]? max_sc : mat[t];
 
+	long_thres = (q2 - q) / (e - e2) - 1;
+	if (q2 + e2 + long_thres * e2 > q + e + long_thres * e)
+		++long_thres;
+	long_diff = long_thres * (e - e2) - (q2 - q) - e2;
+
 	mem = (uint8_t*)kcalloc(km, tlen_ * 8 + qlen_ + 1, 16);
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
 	v = u + tlen_, x = v + tlen_, y = x + tlen_, x2 = y + tlen_, y2 = x2 + tlen_;
 	s = y2 + tlen_, sf = (uint8_t*)(s + tlen_), qr = sf + tlen_ * 16;
+	memset(u,  -q  - e,  tlen_ * 16);
+	memset(v,  -q  - e,  tlen_ * 16);
+	memset(x,  -q  - e,  tlen_ * 16);
+	memset(y,  -q  - e,  tlen_ * 16);
+	memset(x2, -q2 - e2, tlen_ * 16);
+	memset(y2, -q2 - e2, tlen_ * 16);
 	if (!approx_max) {
 		H = (int32_t*)kmalloc(km, tlen_ * 16 * 4);
 		for (t = 0; t < tlen_ * 16; ++t) H[t] = KSW_NEG_INF;
@@ -121,9 +134,18 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		if (st > 0) {
 			if (st - 1 >= last_st && st - 1 <= last_en) {
 				x1 = x8[st - 1], x21 = x28[st - 1], v1 = v8[st - 1]; // (r-1,s-1) calculated in the last round
-			} else x1 = x21 = v1 = 0; // not calculated; set to zeros
-		} else x1 = -q - e, x21 = -q2 - e2, v1 = r? q : 0;
-		if (en >= r) ((int8_t*)y)[r] = 0, ((int8_t*)y2)[r] = 0, u8[r] = r? q : 0;
+			} else {
+				x1 = -q - e, x21 = -q2 - e2;
+				v1 = -q - e;
+			}
+		} else {
+			x1 = -q - e, x21 = -q2 - e2;
+			v1 = r == 0? -q - e : r < long_thres? -e : r == long_thres? long_diff : -e2;
+		}
+		if (en >= r) {
+			((int8_t*)y)[r] = -q - e, ((int8_t*)y2)[r] = -q2 - e2;
+			u8[r] = r == 0? -q - e : r < long_thres? -e : r == long_thres? long_diff : -e2;
+		}
 		// loop fission: set scores first
 		if (!(flag & KSW_EZ_GENERIC_SC)) {
 			for (t = st0; t <= en0; t += 16) {
@@ -138,16 +160,16 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				tmp = _mm_or_si128(_mm_andnot_si128(tmp, sc_mis_), _mm_and_si128(tmp, sc_mch_));
 #endif
 				tmp = _mm_andnot_si128(mask, tmp);
-				_mm_storeu_si128((__m128i*)((uint8_t*)s + t), tmp);
+				_mm_storeu_si128((__m128i*)((int8_t*)s + t), tmp);
 			}
 		} else {
 			for (t = st0; t <= en0; ++t)
 				((uint8_t*)s)[t] = mat[sf[t] * m + qrr[t]];
 		}
 		// core loop
-		x1_ = _mm_cvtsi32_si128(x1);
-		x21_= _mm_cvtsi32_si128(x21);
-		v1_ = _mm_cvtsi32_si128(v1);
+		x1_  = _mm_cvtsi32_si128((uint8_t)x1);
+		x21_ = _mm_cvtsi32_si128((uint8_t)x21);
+		v1_  = _mm_cvtsi32_si128((uint8_t)v1);
 		st_ = st / 16, en_ = en / 16;
 		if (!with_cigar) { // score only
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
@@ -190,24 +212,26 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				d = _mm_or_si128(_mm_andnot_si128(tmp, d), _mm_and_si128(tmp, _mm_set1_epi8(4)));
 				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, b2));
 #endif
+				//fprintf(stderr, "z[%d]=%d, v[1]=%d, a=%d, b=%d\n", st0, ((int8_t*)&z)[st0], ((int8_t*)&vt1)[1], ((int8_t*)&a)[st0], ((int8_t*)&b)[st0]);
 				__dp_code_block2;
 				tmp = _mm_cmpgt_epi8(a, zero_);
-				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_and_si128(tmp, a),  qe2_));
+				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_and_si128(tmp, a),  qe_));
 				d = _mm_or_si128(d, _mm_and_si128(tmp, _mm_set1_epi8(0x08))); // d = a > 0? 1<<3 : 0
 				tmp = _mm_cmpgt_epi8(b, zero_);
-				_mm_store_si128(&y[t],  _mm_sub_epi8(_mm_and_si128(tmp, b),  qe2_));
+				_mm_store_si128(&y[t],  _mm_sub_epi8(_mm_and_si128(tmp, b),  qe_));
 				d = _mm_or_si128(d, _mm_and_si128(tmp, _mm_set1_epi8(0x10))); // d = b > 0? 1<<4 : 0
 				tmp = _mm_cmpgt_epi8(a2, zero_);
-				_mm_store_si128(&x2[t], _mm_sub_epi8(_mm_and_si128(tmp, a2), qe22_));
+				_mm_store_si128(&x2[t], _mm_sub_epi8(_mm_and_si128(tmp, a2), qe2_));
 				d = _mm_or_si128(d, _mm_and_si128(tmp, _mm_set1_epi8(0x20))); // d = a > 0? 1<<5 : 0
 				tmp = _mm_cmpgt_epi8(b2, zero_);
-				_mm_store_si128(&y2[t], _mm_sub_epi8(_mm_and_si128(tmp, b2), qe22_));
+				_mm_store_si128(&y2[t], _mm_sub_epi8(_mm_and_si128(tmp, b2), qe2_));
 				d = _mm_or_si128(d, _mm_and_si128(tmp, _mm_set1_epi8(0x40))); // d = b > 0? 1<<6 : 0
 				_mm_store_si128(&pr[t], d);
 			}
 		} else { // gap right-alignment
 		}
 		if (with_cigar && en0 < r) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
+		//fprintf(stderr, "[%d:%d,%d] %d,%d\n", r, st0, en0, u8[st0], v8[st0]);
 		if (!approx_max) { // find the exact max with a 32-bit score array
 			int32_t max_H, max_t;
 			// compute H[], max_H and max_t
@@ -264,8 +288,9 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				} else {
 					++last_H0_t, H0 += u8[last_H0_t];
 				}
-				if ((flag & KSW_EZ_APPROX_DROP) && apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
 			} else H0 = v8[0] - qe, last_H0_t = 0;
+			if ((flag & KSW_EZ_APPROX_DROP) && apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
+			//fprintf(stderr, "[%d;%d] %d\n", r, last_H0_t, H0);
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;
 		}

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "ksw2.h"
 
 #ifdef __SSE2__

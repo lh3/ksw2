@@ -75,6 +75,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
@@ -141,7 +142,7 @@ int main(int argc, char *argv[])
 {
 	void *km = 0;
 	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 11, e2 = 1;
-	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 200;
+	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 1000;
 	char *algo = "extz", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;
@@ -154,7 +155,7 @@ int main(int argc, char *argv[])
 		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
-		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX;
+		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
 		else if (c == 'd') flag |= KSW_EZ_DYN_BAND;
 		else if (c == 'A') a = atoi(optarg);
 		else if (c == 'B') b = atoi(optarg);
