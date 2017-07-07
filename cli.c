@@ -138,7 +138,7 @@ static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
 int main(int argc, char *argv[])
 {
 	void *km = 0;
-	int8_t a = 1, b = 2, q = 2, e = 1;
+	int8_t a = 1, b = 1, q = 1, e = 1;
 	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 100;
 	char *algo = "extz";
 	int8_t mat[25];
