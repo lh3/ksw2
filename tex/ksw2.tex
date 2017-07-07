@@ -102,7 +102,14 @@ H_{ij}-H_{i-1,j-1}
 \end{eqnarray*}
 and
 \[H_{ij}-H_{i-1,j-1}=u'_{ij}+v'_{i-1,j}=v'_{ij}+u'_{i,j-1}\]
-We can derive the recursive equation for $u'_{ij}$ and $v'_{ij}$.
+We can derive the recursive equation for $u'_{ij}$ and $v'_{ij}$:
+\begin{eqnarray*}
+z'_{ij}&=&\max\{S(i,j),x'_{i-1,j}+v'_{i-1,j},y'_{i,j-1}+u'_{i,j-1}\}\\
+u'_{ij}&=&z'_{ij}-v'_{i-1,j}\\
+v'_{ij}&=&z'_{ij}-u'_{i,j-1}\\
+x'_{ij}&=&\max\{0,x'_{i-1,j}+v'_{i-1,j}-z'_{ij}+q\}-q-e\\
+y'_{ij}&=&\max\{0,y'_{i,j-1}+u'_{i,j-1}-z'_{ij}+q\}-q-e
+\end{eqnarray*}
 
 From eq.~(\ref{eq:x}) we can infer that $x'_{ij}\ge-q-e$ and similarly
 $y'_{ij}\ge-q-e$. We further have:
@@ -167,5 +174,46 @@ Putting these together:
   q & (r>0) \\
   0 & (r=0)
 \end{array}\right.\]
+
+\section{Alignment with dual affine-gap penalties}
+
+\subsection{Green's formulation}
+
+\begin{eqnarray*}
+H_{ij} &=& \max\{H_{i-1,j-1}+S(i,j),E'_{i-1,j},F'_{i,j-1}\}\\
+E'_{ij}&=& \max\{H_{ij}-q,E'_{i-1,j}\}-e\\
+F'_{ij}&=& \max\{H_{ij}-q,F'_{i,j-1}\}-e\\
+\tilde{E}'_{ij}&=& \max\{H_{ij}-\tilde{q},\tilde{E}'_{i-1,j}\}-\tilde{e}\\
+\tilde{F}'_{ij}&=& \max\{H_{ij}-\tilde{q},\tilde{F}'_{i,j-1}\}-\tilde{e}
+\end{eqnarray*}
+The initial conditions are:
+\begin{eqnarray*}
+H_{-1,j}&=&
+  \left\{\begin{array}{ll}
+    0 & (j=-1)\\
+	\max\{-q-(j+1)\cdot e,-\tilde{q}-(j+1)\cdot\tilde{e}\} & (0\le j<\ell_q)
+  \end{array}\right.\\
+H_{i,-1}&=&
+  \left\{\begin{array}{ll}
+    0 & (i=-1)\\
+	\max\{-q-(i+1)\cdot e,-\tilde{q}-(i+1)\cdot\tilde{e}\} & (0\le i<\ell_t)
+  \end{array}\right.\\
+E'_{-1,j}&=&E_{0,j}=H_{-1,j}-q-e=-2q-(j+2)\cdot e\\
+F'_{i,-1}&=&F_{i,0}=-2q-(i+2)\cdot e\\
+\tilde{E}'_{-1,j}&=&\tilde{E}_{0,j}=H_{-1,j}-\tilde{q}-\tilde{e}=-2\tilde{q}-(j+2)\cdot\tilde{e}\\
+\tilde{F}'_{i,-1}&=&\tilde{F}_{i,0}=-2\tilde{q}-(i+2)\cdot\tilde{e}
+\end{eqnarray*}
+
+\subsection{Suzuki's formulation}
+
+\begin{eqnarray*}
+z'_{ij}&=&\max\{S(i,j),x'_{i-1,j}+v'_{i-1,j},y'_{i,j-1}+u'_{i,j-1},\tilde{x}'_{i-1,j}+v'_{i-1,j},\tilde{y}'_{i,j-1}+u'_{i,j-1}\}\\
+u'_{ij}&=&z'_{ij}-v'_{i-1,j}\\
+v'_{ij}&=&z'_{ij}-u'_{i,j-1}\\
+x'_{ij}&=&\max\{0,x'_{i-1,j}+v'_{i-1,j}-z'_{ij}+q\}-q-e\\
+y'_{ij}&=&\max\{0,y'_{i,j-1}+u'_{i,j-1}-z'_{ij}+q\}-q-e\\
+\tilde{x}'_{ij}&=&\max\{0,\tilde{x}'_{i-1,j}+v'_{i-1,j}-z'_{ij}+\tilde{q}\}-\tilde{q}-\tilde{e}\\
+\tilde{y}'_{ij}&=&\max\{0,\tilde{y}'_{i,j-1}+u'_{i,j-1}-z'_{ij}+\tilde{q}\}-\tilde{q}-\tilde{e}
+\end{eqnarray*}
 
 \end{document}

@@ -48,6 +48,9 @@ extern "C" {
 void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez);
 void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez);
 
+void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
+			  int8_t gapo, int8_t gape, int8_t gapo2, int8_t gape2, int w, int zdrop, int flag, ksw_extz_t *ez);
+
 /**
  * Global alignment
  *
@@ -104,6 +107,28 @@ static inline void ksw_backtrack(void *km, int is_rot, int is_rev, const uint8_t
 		if (which == 0)      cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
 		else if (which == 1) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i;      // deletion
 		else                 cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j;      // insertion
+	}
+	if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
+	if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
+	if (!is_rev)
+		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
+			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
+	*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
+}
+
+static inline void ksw_backtrack_d(void *km, int is_rot, int is_rev, const uint8_t *p, const int *off, int n_col, int i0, int j0, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
+{ // TODO: ksw_backtrack and ksw_backtrack_d can be merged
+	int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i = i0, j = j0, r;
+	uint32_t *cigar = *cigar_, tmp;
+	while (i >= 0 && j >= 0) {
+		if (is_rot) r = i + j, tmp = p[r * n_col + i - off[r]];
+		else tmp = p[i * n_col + j - off[i]];
+		if (which == 0) which = tmp & 7;
+		else if (!(tmp >> (which + 2) & 1)) which = 0;
+		if (which == 0) which = tmp & 7;
+		if (which == 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
+		else if (which == 1 || which == 3) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i; // deletion
+		else cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j; // insertion
 	}
 	if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
 	if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
