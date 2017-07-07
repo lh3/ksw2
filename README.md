@@ -1,57 +1,32 @@
-## What
+## Introduction
 
 KSW2 is a library to align a pair of biological sequences based on dynamic
 programming (DP). So far it comes with global alignment and alignment extension
-(no local alignment yet) under affine gap penalty. It supports fixed banding
-and optionally produces alignment paths (i.e. CIGARs) with gaps either left- or
-right-aligned.  In addition to plain implementations of the algorithms, KSW2
-also provides implementations using SSE2 and SSE4.1 intrinsics. It adopted
-[Hajime Suzuki][hs]'s [formulation][hs-eq] which enables 16-way SSE
-parallelization for the most part of the inner loop, regardless of the maximum
-score of the alignment.
+(no local alignment yet) under an affine gap cost function: gapCost(*k*) =
+*q*+*k*\**e*, or a dual affine gap cost: gapCost2(*k*) = min{*q*+*k*\**e*,
+*q2*+*k*\**e2*}. For the dual cost function, if *q*+*e*<*q2*+*e2* and *e*>*e2*,
+(*q*,*e*) is effectively applied to short gaps only, while (*q2*,*e2*) applied
+to gaps no shorter than ceil((*q2*-*q*)/(*e*-*e2*)-1). The dual-cost function
+may help to retain long gaps.
 
-## Why
+KSW2 supports fixed banding and optionally produces alignment paths (i.e.
+CIGARs) with gaps either left- or right-aligned. It provides implementations
+using SSE2 and SSE4.1 intrinsics based on [Hajime Suzuki][hs]'s diagonal
+[formulation][hs-eq] which enables 16-way SSE parallelization for the most part
+of the inner loop, regardless of the maximum score of the alignment.
 
-Many libraries perform DP-based alignment. The following table gives an
-overview:
-
-|Library         |CIGAR|Intra-seq|Affine-gap|Local    |Global   |Glocal   |Extension|
-|:---------------|:---:|:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|
-|[edlib][edlib]  |Yes  |Yes      |No        |Very fast|Very fast|Very fast|N/A      |
-|[KSW][klib]     |Yes  |Yes      |Yes       |Fast     |Slow     |N/A      |Slow     |
-|KSW2            |Yes  |Yes      |Yes       |N/A      |Fast     |N/A      |Fast     |
-|[libgaba][gaba] |Yes  |Yes      |Yes       |N/A?     |N/A?     |N/A?     |Fast     |
-|[libssa][ssa]   |No   |No?      |Yes       |Fast     |Fast     |N/A      |N/A      |
-|[Opal][opal]    |No   |No       |Yes       |Fast     |Fast     |Fast     |N/A      |
-|[Parasail][para]|No   |Yes      |Yes       |Fast     |Fast     |Fast     |N/A      |
-|[SeqAn][seqan]  |Yes  |Yes      |Yes       |Slow     |Slow     |Slow     |N/A      |
-|[SSW][ssw]      |Yes  |Yes      |Yes       |Fast     |N/A      |N/A      |N/A      |
-|[SWIPE][swipe]  |Yes  |No       |Yes       |Fast     |N/A?     |N/A?     |N/A      |
-|[SWPS3][swps3]  |No   |Yes      |Yes       |Fast     |N/A?     |N/A      |N/A      |
-
-We developed KSW2 because it comes with a set of features needed for developing
-aligners. For a seed-and-extend based aligner, KSW2 can be used to close gaps
-between seeds.  When there is a long gap between two adjacent seed hits, we
-prefer a global alignment but cannot force the query and reference sequences to
-be fully aligned because they may differ due to structural variations such as long
-inversions, which may leave a long poorly aligned regions in the middle.  KSW2
-can detect such poorly regions with *diagonal X-drop*, which I call as *Z-drop*.
-Z-drop is like X-drop except that it does not panelize gap extensions and thus
-helps to recover long gaps. Variant callers for high-throughput sequencing data
-usually expect gaps to be left-aligned.  To achieve this, we need gaps to be
-left-aligned when we extend to the right, while right-aligned when we extend to
-the left. Both gap placements are necessary.
-
-## How to use
+## Usage
 
 Each `ksw2_*.c` file implements a single function and is independent of each
 other. Here are brief descriptions about what each file implements:
 
 * [ksw2_gg.c](ksw2_gg.c): global alignment; Green's standard formulation
 * [ksw2_gg2.c](ksw2_gg2.c): global alignment; Suzuki's diagonal formulation
-* [ksw2_gg2_sse.c](ksw2_gg2_sse.c): global alignment with mostly aligned SSE intrinsics; Suzuki's
-* [ksw2_extz.c](ksw2_extz.c): alignment extension; Green's formulation
-* [ksw2_extz2_sse.c](ksw2_extz2_sse.c): extension with mostly aligned SSE intrinsics; Suzuki's
+* [ksw2_gg2_sse.c](ksw2_gg2_sse.c): global alignment with SSE intrinsics; Suzuki's
+* [ksw2_extz.c](ksw2_extz.c): global and extension alignment; Green's formulation
+* [ksw2_extz2_sse.c](ksw2_extz2_sse.c): global and extension with SSE intrinsics; Suzuki's
+* [ksw2_extd.c](ksw2_extd.c): global and extension alignment, dual gap cost; Green's formulation
+* [ksw2_extd2_sse.c](ksw2_extd2_sse.c): global and extension, dual gap cost, with SSE intrinsics; Suzuki's
 
 Users are encouraged to copy the header file `ksw2.h` and relevant
 `ksw2_*.c` file to their own source code trees. On x86 CPUs with SSE2
@@ -62,13 +37,11 @@ and comparison purposes. They are annotated with more comments and easier to
 understand than `ksw2_ext*.c`. Header file [ksw2.h](ksw2.h) gives brief
 documentations.
 
-To compile the test program `ksw-test`, just type `make`. For most x86
-compilers, this doesn't take the advantage of SSE4.1. To compile with SSE4.1
-for better performance, use `make sse4=1` instead. If you have installed
-parasail, use `make sse4=1 parasail=prefix`, where `prefix` points to the
-parasail install directory (e.g. `/usr/local`). The test program can also
-use libgaba, but I failed to produce desired alignment on the test data,
-probably due to my fault.
+To compile the test program `ksw-test`, just type `make`. It takes the
+advantage of SSE4.1 when available. To compile with SSE2 only, use `make
+sse2=1` instead. If you have installed [parasail][para], use `make
+parasail=prefix`, where `prefix` points to the parasail install directory (e.g.
+`/usr/local`).
 
 ## Performance Analysis
 
@@ -111,6 +84,22 @@ It is possible to further accelerate global alignment with dynamic banding as
 is implemented in [edlib][edlib]. However, it is not as effective for extension
 alignment. Another idea is [adaptive banding][adap-band], which might be worth
 trying at some point.
+
+## Alternative Libraries
+
+|Library         |CIGAR|Intra-seq|Affine-gap|Local    |Global   |Glocal   |Extension|
+|:---------------|:---:|:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|
+|[edlib][edlib]  |Yes  |Yes      |No        |Very fast|Very fast|Very fast|N/A      |
+|[KSW][klib]     |Yes  |Yes      |Yes       |Fast     |Slow     |N/A      |Slow     |
+|KSW2            |Yes  |Yes      |Yes       |N/A      |Fast     |N/A      |Fast     |
+|[libgaba][gaba] |Yes  |Yes      |Yes       |N/A?     |N/A?     |N/A?     |Fast     |
+|[libssa][ssa]   |No   |No?      |Yes       |Fast     |Fast     |N/A      |N/A      |
+|[Opal][opal]    |No   |No       |Yes       |Fast     |Fast     |Fast     |N/A      |
+|[Parasail][para]|No   |Yes      |Yes       |Fast     |Fast     |Fast     |N/A      |
+|[SeqAn][seqan]  |Yes  |Yes      |Yes       |Slow     |Slow     |Slow     |N/A      |
+|[SSW][ssw]      |Yes  |Yes      |Yes       |Fast     |N/A      |N/A      |N/A      |
+|[SWIPE][swipe]  |Yes  |No       |Yes       |Fast     |N/A?     |N/A?     |N/A      |
+|[SWPS3][swps3]  |No   |Yes      |Yes       |Fast     |N/A?     |N/A      |N/A      |
 
 
 

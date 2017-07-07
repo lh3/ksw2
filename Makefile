@@ -1,5 +1,5 @@
 CC=			gcc
-CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2 #-march=native
+CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
 CPPFLAGS=	-DHAVE_KALLOC
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
@@ -20,8 +20,8 @@ ifneq ($(parasail),) # parasail install prefix
 	LIBS_MORE += $(parasail)/lib/libparasail.a # don't link against the dynamic library
 endif
 
-ifneq ($(sse4),)
-	CFLAGS += -msse4
+ifeq ($(sse2),)
+	CFLAGS += -march=native
 endif
 
 ifneq ($(avx2),)
