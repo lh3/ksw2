@@ -141,9 +141,9 @@ static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
 int main(int argc, char *argv[])
 {
 	void *km = 0;
-	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 11, e2 = 1;
+	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 13, e2 = 1;
 	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = 1000;
-	char *algo = "extz", *s;
+	char *algo = "extd", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -t STR        algorithm: gg, gg2, gg2_sse, extz, extz2_sse, extd [%s]\n", algo);
+		fprintf(stderr, "  -t STR        algorithm: gg, gg2, gg2_sse, extz, extz2_sse, extd, extd2_sse [%s]\n", algo);
 		fprintf(stderr, "  -R INT        repeat INT times (for benchmarking) [1]\n");
 		fprintf(stderr, "  -w INT        band width [inf]\n");
 		fprintf(stderr, "  -z INT        Z-drop [%d]\n", zdrop);
