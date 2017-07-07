@@ -133,11 +133,11 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 				max   = max >= h? max   : h;
 				h -= gapoe;
 				e -= gape;
-				d |= e >= h? 1<<2 : 0;
+				d |= e >= h? 0x08 : 0;
 				e  = e >= h? e    : h;
 				p->e = e;
 				f -= gape;
-				d |= f >= h? 2<<4 : 0; // if we want to halve the memory, use one bit only, instead of two
+				d |= f >= h? 0x10 : 0; // if we want to halve the memory, use one bit only, instead of two
 				f  = f >= h? f    : h;
 				zi[j - st] = d; // z[i,j] keeps h for the current cell and e/f for the next cell
 			}
@@ -166,9 +166,9 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	if (with_cigar) {
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY))
-			ksw_backtrack_d(km, 0, rev_cigar, z, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+			ksw_backtrack(km, 0, rev_cigar, z, off, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		else if (ez->max_t >= 0 && ez->max_q >= 0)
-			ksw_backtrack_d(km, 0, rev_cigar, z, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+			ksw_backtrack(km, 0, rev_cigar, z, off, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		kfree(km, z); kfree(km, off);
 	}
 }

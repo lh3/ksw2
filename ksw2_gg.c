@@ -61,11 +61,11 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 				h1 = h;
 				h -= gapoe;
 				e -= gape;
-				d |= e > h? 1<<2 : 0;
+				d |= e > h? 0x08 : 0;
 				e  = e > h? e    : h;
 				p->e = e;
 				f -= gape;
-				d |= f > h? 2<<4 : 0; // if we want to halve the memory, use one bit only, instead of two
+				d |= f > h? 0x10 : 0; // if we want to halve the memory, use one bit only, instead of two
 				f  = f > h? f    : h;
 				zi[j - st] = d; // z[i,j] keeps h for the current cell and e/f for the next cell
 			}

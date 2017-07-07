@@ -98,39 +98,22 @@ static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar, uin
 	return cigar;
 }
 
+// In the backtrack matrix, value p[] has the following structure:
+//   bit 0-2: which type gets the max - 0 for H, 1 for E, 2 for F, 3 for \tilde{E} and 4 for \tilde{F}
+//   bit 3/0x08: 1 if a continuation on the E state (bit 5/0x20 for a continuation on \tilde{E})
+//   bit 4/0x10: 1 if a continuation on the F state (bit 6/0x40 for a continuation on \tilde{F})
 static inline void ksw_backtrack(void *km, int is_rot, int is_rev, const uint8_t *p, const int *off, int n_col, int i0, int j0, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
-{
-	int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i = i0, j = j0, r;
+{ // p[] - lower 3 bits: which type gets the max; bit
+	int n_cigar = 0, m_cigar = *m_cigar_, i = i0, j = j0, r, state = 0;
 	uint32_t *cigar = *cigar_, tmp;
-	while (i >= 0 && j >= 0) {
+	while (i >= 0 && j >= 0) { // at the beginning of the loop, _state_ tells us which state to check
 		if (is_rot) r = i + j, tmp = p[r * n_col + i - off[r]];
 		else tmp = p[i * n_col + j - off[i]];
-		which = tmp >> (which << 1) & 3;
-		if (which == 0) which = tmp & 3;
-		if (which == 0)      cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
-		else if (which == 1) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i;      // deletion
-		else                 cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j;      // insertion
-	}
-	if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
-	if (j >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
-	if (!is_rev)
-		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
-			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
-	*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
-}
-
-static inline void ksw_backtrack_d(void *km, int is_rot, int is_rev, const uint8_t *p, const int *off, int n_col, int i0, int j0, int *m_cigar_, int *n_cigar_, uint32_t **cigar_)
-{ // TODO: ksw_backtrack and ksw_backtrack_d can be merged
-	int n_cigar = 0, m_cigar = *m_cigar_, which = 0, i = i0, j = j0, r;
-	uint32_t *cigar = *cigar_, tmp;
-	while (i >= 0 && j >= 0) {
-		if (is_rot) r = i + j, tmp = p[r * n_col + i - off[r]];
-		else tmp = p[i * n_col + j - off[i]];
-		if (which == 0) which = tmp & 7;
-		else if (!(tmp >> (which + 2) & 1)) which = 0;
-		if (which == 0) which = tmp & 7;
-		if (which == 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
-		else if (which == 1 || which == 3) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i; // deletion
+		if (state == 0) state = tmp & 7; // if requesting the H state, find state one maximizes it.
+		else if (!(tmp >> (state + 2) & 1)) state = 0; // if requesting other states, _state_ stays the same if it is a continuation; otherwise, set to H
+		if (state == 0) state = tmp & 7; // TODO: probably this line can be merged into the "else if" line right above; not 100% sure
+		if (state == 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 0, 1), --i, --j; // match
+		else if (state == 1 || state == 3) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, 1), --i; // deletion
 		else cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1, 1), --j; // insertion
 	}
 	if (i >= 0) cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 2, i + 1); // first deletion
