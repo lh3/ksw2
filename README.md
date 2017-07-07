@@ -34,8 +34,8 @@ intrinsics, `ksw2_extz2_sse.c` is recommended in general. It supports global
 alignment, alignment extension with Z-drop, score-only alignment, global-only
 alignment and right-aligned CIGARs. `ksw2_gg*.c` are mostly for demonstration
 and comparison purposes. They are annotated with more comments and easier to
-understand than `ksw2_ext*.c`. Header file [ksw2.h](ksw2.h) gives brief
-documentations.
+understand than `ksw2_ext*.c`. Header file [ksw2.h](ksw2.h) contains brief
+documentations. TeX file [ksw2.tex](tex/ksw2.tex) gives brief derivation.
 
 To compile the test program `ksw-test`, just type `make`. It takes the
 advantage of SSE4.1 when available. To compile with SSE2 only, use `make
@@ -91,7 +91,7 @@ trying at some point.
 |:---------------|:---:|:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|
 |[edlib][edlib]  |Yes  |Yes      |No        |Very fast|Very fast|Very fast|N/A      |
 |[KSW][klib]     |Yes  |Yes      |Yes       |Fast     |Slow     |N/A      |Slow     |
-|KSW2            |Yes  |Yes      |Yes       |N/A      |Fast     |N/A      |Fast     |
+|KSW2            |Yes  |Yes      |Yes/dual  |N/A      |Fast     |N/A      |Fast     |
 |[libgaba][gaba] |Yes  |Yes      |Yes       |N/A?     |N/A?     |N/A?     |Fast     |
 |[libssa][ssa]   |No   |No?      |Yes       |Fast     |Fast     |N/A      |N/A      |
 |[Opal][opal]    |No   |No       |Yes       |Fast     |Fast     |Fast     |N/A      |
