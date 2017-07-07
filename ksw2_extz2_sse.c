@@ -1,5 +1,4 @@
 #include <string.h>
-#include <stdio.h>
 #include "ksw2.h"
 
 #ifdef __SSE2__
@@ -164,7 +163,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
 			__m128i *pr = p + r * n_col_ - st_;
 			off[r] = st;
-			if (en0 < r) { // to avoid backtracking out of the band; this assumes a fixed band
+			if (en0 < r && en0 < tlen - 1) { // to avoid backtracking out of the band; this assumes a fixed band
 				int8_t a, z = ((uint8_t*)s)[en0] + 2 * qe;
 				a = x8[en0-1] + v8[en0-1];
 				p_en0 = a > z? 1 : 0;
@@ -197,7 +196,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else { // gap right-alignment
 			__m128i *pr = p + r * n_col_ - st_;
 			off[r] = st;
-			if (en0 < r) {
+			if (en0 < r && en0 < tlen - 1) {
 				int8_t a, z = ((uint8_t*)s)[en0] + 2 * qe;
 				a = x8[en0-1] + v8[en0-1];
 				p_en0 = a >= z? 1 : 0;
@@ -228,7 +227,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_store_si128(&pr[t], d);
 			}
 		}
-		if (with_cigar && en0 < r) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
+		if (with_cigar && en0 < r && en0 < tlen - 1) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
 		if (!approx_max) { // find the exact max with a 32-bit score array
 			int32_t max_H, max_t;
 			// compute H[], max_H and max_t

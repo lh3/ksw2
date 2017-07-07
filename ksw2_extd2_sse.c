@@ -175,7 +175,7 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
 			__m128i *pr = p + r * n_col_ - st_;
 			off[r] = st;
-			if (en0 < r) { // to avoid backtracking out of the band; this assumes a fixed band
+			if (en0 < r && en0 < tlen - 1) { // to avoid backtracking out of the band; this assumes a fixed band
 				int8_t a, a2, z = ((uint8_t*)s)[en0];
 				a = x8[en0-1] + v8[en0-1];
 				p_en0 = a > z? 1 : 0;
@@ -212,7 +212,6 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				d = _mm_or_si128(_mm_andnot_si128(tmp, d), _mm_and_si128(tmp, _mm_set1_epi8(4)));
 				z = _mm_or_si128(_mm_andnot_si128(tmp, z), _mm_and_si128(tmp, b2));
 #endif
-				//fprintf(stderr, "z[%d]=%d, v[1]=%d, a=%d, b=%d\n", st0, ((int8_t*)&z)[st0], ((int8_t*)&vt1)[1], ((int8_t*)&a)[st0], ((int8_t*)&b)[st0]);
 				__dp_code_block2;
 				tmp = _mm_cmpgt_epi8(a, zero_);
 				_mm_store_si128(&x[t],  _mm_sub_epi8(_mm_and_si128(tmp, a),  qe_));
@@ -230,8 +229,7 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			}
 		} else { // gap right-alignment
 		}
-		if (with_cigar && en0 < r) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
-		//fprintf(stderr, "[%d:%d,%d] %d,%d\n", r, st0, en0, u8[st0], v8[st0]);
+		if (with_cigar && en0 < r && en0 < tlen - 1) ((uint8_t*)(p + r * n_col_))[en0 - st] = p_en0;
 		if (!approx_max) { // find the exact max with a 32-bit score array
 			int32_t max_H, max_t;
 			// compute H[], max_H and max_t
@@ -290,7 +288,6 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				}
 			} else H0 = v8[0] - qe, last_H0_t = 0;
 			if ((flag & KSW_EZ_APPROX_DROP) && apply_zdrop(ez, H0, r, last_H0_t, zdrop, e)) break;
-			//fprintf(stderr, "[%d;%d] %d\n", r, last_H0_t, H0);
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;
 		}
