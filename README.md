@@ -4,11 +4,11 @@ KSW2 is a library to align a pair of biological sequences based on dynamic
 programming (DP). So far it comes with global alignment and alignment extension
 (no local alignment yet) under an affine gap cost function: gapCost(*k*) =
 *q*+*k*\**e*, or a dual affine gap cost: gapCost2(*k*) = min{*q*+*k*\**e*,
-*q2*+*k*\**e2*}. For the dual cost function, which is a special case of
-[piece-wise affine cost][piece-affine] if *q*+*e*<*q2*+*e2* and *e*>*e2*,
-(*q*,*e*) is effectively applied to short gaps only, while (*q2*,*e2*) applied
-to gaps no shorter than ceil((*q2*-*q*)/(*e*-*e2*)-1). The dual-cost function
-may help to retain long gaps.
+*q2*+*k*\**e2*} (which is a special case of [piece-wise affine
+cost][piece-affine]). For the dual cost function, if *q*+*e*<*q2*+*e2* and
+*e*>*e2*, (*q*,*e*) is effectively applied to short gaps only, while
+(*q2*,*e2*) applied to gaps no shorter than ceil((*q2*-*q*)/(*e*-*e2*)-1). The
+dual-cost function may help to retain long gaps.
 
 KSW2 supports fixed banding and optionally produces alignment paths (i.e.
 CIGARs) with gaps either left- or right-aligned. It provides implementations
