@@ -69,12 +69,8 @@ briefly touch other types of alignment (e.g. glocal alignment).
 
 A linear gap cost function is $\gamma_0(k;e)=k\cdot e$. Let the optimal score up
 to cell $(i,j)$ is $H_{ij}$. The equation to compute $H_{n-1,m-1}$ is:
-\begin{equation}\label{eq:linear}
-H_{ij}=\left\{\begin{array}{l}
-H_{i-1,j-1}+s(i,j) \\
-H_{i-1,j}-e \\
-H_{i,j-1}-e
-\end{array}\right.
+\begin{equation}
+H_{ij}=\max\{H_{i-1,j-1}+s(i,j), H_{i-1,j}-e, H_{i,j-1}-e\}
 \end{equation}
 
 \subsection{Edit distance}

@@ -76,6 +76,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extf2_sse") == 0)   ksw_extf2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, mat[0], mat[1], e, w, zdrop, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
@@ -159,10 +160,10 @@ int main(int argc, char *argv[])
 		else if (c == 'A') a = atoi(optarg);
 		else if (c == 'B') b = atoi(optarg);
 		else if (c == 'O') {
-			q = strtol(optarg, &s, 10);
+			q = q2 = strtol(optarg, &s, 10);
 			if (*s == ',') q2 = strtol(s+1, &s, 10);
 		} else if (c == 'E') {
-			e = strtol(optarg, &s, 10);
+			e = e2 = strtol(optarg, &s, 10);
 			if (*s == ',') e2 = strtol(s+1, &s, 10);
 		}
 	}
