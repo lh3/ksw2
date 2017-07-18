@@ -13,6 +13,7 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 	y = (int8_t*)kcalloc(km, tlen + 1, 1);
 	s = (int8_t*)kmalloc(km, tlen);
 	qr = (uint8_t*)kmalloc(km, qlen);
+	if (w < 0) w = tlen > qlen? tlen : qlen;
 	n_col = w + 1 < tlen? w + 1 : tlen;
 	if (m_cigar_ && n_cigar_ && cigar_) {
 		p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);

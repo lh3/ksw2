@@ -39,8 +39,8 @@ extern "C" {
  * @param mat       m*m scoring mattrix in one-dimension array
  * @param gapo      gap open penalty; a gap of length l cost "-(gapo+l*gape)"
  * @param gape      gap extension penalty
- * @param w         band width
- * @param zdrop     off-diagonal drop-off to stop extension (positive)
+ * @param w         band width (<0 to disable)
+ * @param zdrop     off-diagonal drop-off to stop extension (positive; <0 to disable)
  * @param flag      flag (see KSW_EZ_* macros)
  * @param ez        (out) scores and cigar
  */

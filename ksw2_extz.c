@@ -13,6 +13,7 @@ void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 	ksw_reset_extz(ez);
 
 	// allocate memory
+	if (w < 0) w = tlen > qlen? tlen : qlen;
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
 	qp = (int8_t*)kmalloc(km, qlen * m);
 	eh = (eh_t*)kcalloc(km, qlen + 1, 8);

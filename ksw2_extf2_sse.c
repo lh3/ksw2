@@ -20,6 +20,7 @@ void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	sc_mis_ = _mm_set1_epi8(mis < 0? mis : -mis);
 	tlen_ = (tlen + 15) / 16;
 	qlen_ = (qlen + 15) / 16;
+	if (w < 0) w = tlen > qlen? tlen : qlen;
 
 	mem = (uint8_t*)kcalloc(km, tlen_ * 4 + qlen_ + 1, 16);
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned

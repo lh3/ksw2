@@ -63,7 +63,6 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 		qseq[i] = seq_nt4_table[(uint8_t)qseq_[i]];
 	for (i = 0; i < tlen; ++i)
 		tseq[i] = seq_nt4_table[(uint8_t)tseq_[i]];
-	if (w < 0) w = qlen > tlen? qlen : tlen;
 	if (strcmp(algo, "gg") == 0) {
 		if (flag & KSW_EZ_SCORE_ONLY) ez->score = ksw_gg(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, 0, 0, 0);
 		else ez->score = ksw_gg(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);

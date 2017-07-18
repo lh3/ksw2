@@ -23,6 +23,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_
 	flag8_  = _mm_set1_epi8(0x08);
 	flag16_ = _mm_set1_epi8(0x10);
 
+	if (w < 0) w = tlen > qlen? tlen : qlen;
 	n_col = w + 1 < tlen? w + 1 : tlen; // number of columns in the backtrack matrix
 	tlen_ = (tlen + 15) / 16;
 	n_col_ = (n_col + 15) / 16 + 1;

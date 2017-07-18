@@ -54,31 +54,35 @@ to find long gaps in the alignment.
 
 \section{Alignment with dynamic programming}
 
-In this section, let $T$ be the \emph{target} sequence or the \emph{reference}
-sequence of length $n=|T|$ and $Q$ be the \emph{query} sequence of length
-$m=|Q|$. Gaps on the target sequence are \emph{deletions}; gaps on the query
-sequence are \emph{insertions}. Function $s(i,j)$, $0\le i<n$ and $0\le j<m$,
-gives the score between the $T[i]$ and $Q[j]$.
-
-We will focus on global alignment algorithms because it is usually more complex
-than local alignment due to non-trivial initial conditions. We will also
-briefly touch other types of alignment (e.g. glocal alignment).
+Let $T$ be the \emph{target} sequence or the \emph{reference} sequence of
+length $n=|T|$ and $Q$ be the \emph{query} sequence of length $m=|Q|$. Gaps on
+the target sequence are \emph{deletions}; gaps on the query sequence are
+\emph{insertions}. Function $s(i,j)$, $0\le i<n$ and $0\le j<m$, gives the
+score between the $T[i]$ and $Q[j]$. We will focus on global alignment
+algorithms because it is usually more complex than local alignment due to
+non-trivial initial conditions.
 
 \subsection{Levenshtein distance}
 
 \emph{Levenshtein distance}~\citep{Levenshtein:1966aa} is the minimum sum of
 substitutions, insertions and deletions among all possible alignments between
 two sequences. The author proposed the measurement but did not provide an
-algorithm to compute the distance. Levenshtein distance is the most common type
-of edit distance. Other types of edit distances may include fewer (e.g. no
-substitutions) or more edit operations (e.g. transpositions).
+algorithm to compute the distance. Levenshtein distance is the most common
+measure of edit distance. Other variants of edit distances may include fewer
+(e.g. no substitutions) or more types of primitive edit operations (e.g.
+transpositions).
 
-Levenshtein distance can be computed with DP with equation
+Levenshtein distance can be computed with DP. Let $H_{ij}$ be the distance
+between prefixes $T[0..i]$ and $Q[0..j]$. The distance between the full
+sequences will be $H_{n-1,m-1}$, which can be recursively computed with
 \begin{equation}\label{eq:ed}
 H_{ij}=\min\{H_{i-1,j-1}+1-\delta_{T[i],Q[j]}, H_{i-1,j}+1, H_{i,j-1}+1\}
 \end{equation}
 where $\delta_{ab}$ is the Kronecker delta function, which equals 1 if $a=b$ or
-0 otherwise.  Faster algorithms exist.  \citet{Landau:1986aa} found an $O(kn)$
+0 otherwise. The initial conditions are: $H_{-1,-1}=0$, $H_{-1,j}=j$ and
+$H_{i,-1}=i$. This is an $O(mn)$ algorithm.
+
+Practically faster algorithms exist. \citet{Landau:1986aa} found an $O(kn)$
 algorithm that guarantees to find the optimal solution if the edit distance is
 no larger than $k$. It is particularly fast if the edit distance is
 small~\citep{Sosic:2015aa}.
@@ -96,25 +100,32 @@ u_{ij}=z_{ij}-v_{i-1,j}\\
 v_{ij}=z_{ij}-u_{i,j-1}
 \end{array}\right.
 \end{equation}
-$u_{ij}$ and $v_{ij}$ only take values $-1$, $0$ or $1$ and can be computed in
-the diagonal direction in the DP matrix. This enables bit-level
-parallelization. Combined with bounding~\citep{Ukkonen:1985aa}, Myers'
-algorithm is significantly faster than the standard algorithm for long
-sequences. Edlib~\citep{Sosic:2017aa} provides an efficient implementation of
-this algorithm with added functionality.
+$u_{ij}$ and $v_{ij}$ only take values $-1$, $0$ or $1$. This enables bit-level
+parallelization, resulting in an $O(mn/w)$ algorithm where $w$ is the size of a
+machine word in bits. Combined with bounding~\citep{Ukkonen:1985aa}, Myers'
+algorithm is significantly faster than Eq.~(\ref{eq:ed}) for long sequences.
+Edlib~\citep{Sosic:2017aa} provides an efficient implementation of this
+algorithm with added functionality.
 
 \subsection{Linear gap cost}
 
-A linear gap cost function is $\gamma_0(k;e)=k\cdot e$. Let the optimal score up
-to cell $(i,j)$ is $H_{ij}$. The equation to compute $H_{n-1,m-1}$ is:
+A natural extension to Levenshtein distance is to give match, mismatch and gaps
+different weights. Let $\gamma_0(k;e)=k\cdot e$, $e>0$, be a \emph{linear gap
+cost function}. The optimal score up to cell $(i,j)$ is $H_{ij}$, which can be
+computed with
 \begin{equation}\label{eq:linear}
 H_{ij}=\max\{H_{i-1,j-1}+s(i,j), H_{i-1,j}-e, H_{i,j-1}-e\}
 \end{equation}
-\citet{Loving:2014aa} extended the bit-parallelism to more general integer
-scoring. The Suzuki's formulation below was also inspired by
-\citet{Myers:1999aa}.
+Typically, we require $2e$ to be larger than the mismatch cost; otherwise the
+alignment would always prefer two gaps over a mismatch -- the final alignment
+would not contain any mismatches.
 
-\subsection{Affine gap cost: Durbin's formulation}
+It is also possible to apply Myer's bit-parallelis to the linear gap cost
+if $s(i,j)$ and $e$ are small integers~\citep{Loving:2014aa}.
+
+\subsection{Classical formulation of affine gap cost}
+
+\subsubsection{Problems with linear gap cost}
 
 With a linear cost function, a long gap is effectively considered to arise from
 a series of small gaps. In evolution, however, a long gap at times results from
@@ -124,6 +135,8 @@ Therefore, it is discouraged to use a linear cost to produce alignment. The
 most common solution to this issue is to use an affine gap cost
 $\gamma_1(k;q,e)=q+k\cdot e$. There are a few different ways to do pairwise
 alignment under an affine gap cost.
+
+\subsubsection{Durbin's formulation}
 
 To give alignment a probablitistic interpretation, \citep{Durbin:1998uq} 
 introduced
@@ -143,7 +156,7 @@ better alignment score. It is possible to add transitions between $E$ and $F$
 in Eq.~(\ref{eq:durbin}), but in practice, AE86's
 formulation~\citep{Altschul:1986aa} will be faster to implement.
 
-\subsection{Affine gap cost: AE86's formulation}
+\subsubsection{AE86's formulation}
 
 In Eq.~(\ref{eq:durbin}), if we let:
 \[H_{ij}=\max\{M_{ij},E_{ij},F_{ij}\}\]

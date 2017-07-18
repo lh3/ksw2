@@ -11,6 +11,7 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 	uint8_t *z = 0; // backtrack matrix; in each cell: f<<4|e<<2|h; in principle, we can halve the memory, but backtrack will be more complex
 
 	// allocate memory
+	if (w < 0) w = tlen > qlen? tlen : qlen;
 	n_col = qlen < 2*w+1? qlen : 2*w+1; // maximum #columns of the backtrack matrix
 	qp = (int8_t*)kmalloc(km, qlen * m);
 	eh = (eh_t*)kcalloc(km, qlen + 1, 8);
