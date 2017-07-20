@@ -15,33 +15,24 @@
 \begin{document}
 \firstpage{1}
 
-\title[Alignment with DP]{On the implementation of pairwise alignment with dynamic programming}
+\title[Pairwise alignment with DP]{On pairwise alignment with dynamic programming}
 \author[Li]{Heng Li}
 \address{Broad Institute, 415 Main Street, Cambridge, MA 02142, USA}
 
 \maketitle
 
 \begin{abstract}
-This \emph{informal} note disambiguates a few different formulations of
-pairwise alignment with dynamic programming (DP), investigates the choice of
-gap cost function and discusses the implementation of DP-based alignment with a
-focus on practical applications. It targets developers who want to grasp
-DP-based alignment and implement it to high performance. Importantly, this note
-is not a general tutorial. Readers are required to understand the basis of
-pairwise alignment before going through the note.
+This \emph{informal} note introduces important literatures on pairwise
+biological sequence alignment with dynamic programming (DP), disambiguates a
+few different formulations, investigates the choice of gap cost function and
+discusses the implementation of DP-based alignment with a focus on practical
+applications. It targets developers who are interested in the history of
+DP-based alignment and want to understand it in depth.  Importantly, this note
+is not a general tutorial. Audience should be familiar with the basis of
+pairwise alignment before reading the note.
 \end{abstract}
 
-\section{Early literature}
-
-On more general
-gap cost, \citet{Miller:1988aa} devised an $O(mn\log\max\{m,n\})$ algorithm
-if $\gamma(k)$ is a concave function. For a piece-wise affine cost composed of
-$p$ affine cost functions for different gap lengths, their algorithm could find
-the optimal alignment in $O(mn\log p)$ time. \citet{Gotoh:1990aa} proposed an
-$O(mn\cdot p)$ algorithm, which is simpler and probably faster for small $p$ in
-practice. As the title of Gotoh's paper suggests, piece-wise cost helps
-to find long gaps in the alignment.
-
+\begin{methods}
 \section{Alignment with dynamic programming}
 
 Let $T$ be the \emph{target} sequence or the \emph{reference} sequence of
@@ -62,19 +53,20 @@ measure of edit distance. Other variants of edit distances may include fewer
 (e.g. no substitutions) or more types of primitive edit operations (e.g.
 transpositions).
 
-Levenshtein distance can be computed with DP. Let $H_{ij}$ be the distance
-between prefixes $T[0..i]$ and $Q[0..j]$. The distance between the full
-sequences will be $H_{n-1,m-1}$, which can be recursively computed with
+Levenshtein distance can be computed with dynamic programming (DP). Let
+$H_{ij}$ be the distance between prefixes $T[0..i]$ and $Q[0..j]$. The distance
+between the full sequences will be $H_{n-1,m-1}$, which can be recursively
+computed with
 \begin{equation}\label{eq:ed}
 H_{ij}=\min\{H_{i-1,j-1}+1-\delta_{T[i],Q[j]}, H_{i-1,j}+1, H_{i,j-1}+1\}
 \end{equation}
 where $\delta_{ab}$ is the Kronecker delta function, which equals 1 if $a=b$ or
-0 otherwise. The initial conditions are: $H_{-1,-1}=0$, $H_{-1,j}=j$ and
-$H_{i,-1}=i$. This is an $O(mn)$ algorithm.
+0 otherwise. The initial conditions are: $H_{-1,j}=j+1$ and $H_{i,-1}=i+1$.
+This is an $O(mn)$ algorithm.
 
 Practically faster algorithms exist. \citet{Landau:1986aa} found an $O(kn)$
 algorithm that guarantees to find the optimal solution if the edit distance is
-no larger than $k$. It is particularly fast if the edit distance is
+no larger than $k$. It is particularly fast if the distance is
 small~\citep{Sosic:2015aa}.
 
 \citet{Myers:1999aa} made an important observation that if we define
@@ -123,8 +115,8 @@ long gap into small pieces and complicates the interpretation of alignment.
 Therefore, it is discouraged to use a linear cost to produce alignment for
 evolutionarily related sequences.
 
-The limitation of linear cost motivated \citet{Waterman:1976aa} to use more
-a general cost function. This work was later folded to \citet{Smith:1981aa},
+The limitation of linear cost motivated \citet{Waterman:1976aa} to use a more
+general cost function. This work was later folded to \citet{Smith:1981aa},
 \emph{the} Smith-Waterman paper. With a general cost, the time complexity to
 find the optimal alignment is $O(mn\max\{m,n\})$. \citet{Gotoh:1982aa} showed
 that when the cost function takes a form $\gamma_1(k;q,e)=q+k\cdot e$, which is
@@ -134,7 +126,7 @@ algorithm and introduced the formulation we commonly use today.
 
 \subsubsection{Durbin's formulation}
 
-To give alignment a probablitistic interpretation, \citep{Durbin:1998uq} 
+To give alignment a probablitistic interpretation, \citet{Durbin:1998uq} 
 introduced
 \begin{equation}\label{eq:durbin}
 \left\{\begin{array}{l}
@@ -155,15 +147,15 @@ formulation~\citep{Altschul:1986aa} will be simpler and faster to implement.
 \subsubsection{AE86's formulation}
 
 In Eq.~(\ref{eq:durbin}), if we let:
-\[H_{ij}=\max\{M_{ij},E_{ij},F_{ij}\}\]
+\[H_{ij}\triangleq\max\{M_{ij},E_{ij},F_{ij}\}\]
 Durbin's formulation allowing $E$--$F$ transitions becomes
-\begin{equation*}
+\begin{equation}\label{eq:ae86-ori}
 \left\{\begin{array}{l}
 E_{ij}=\max\{H_{i-1,j}-q, E_{i-1,j}\} - e \\
 F_{ij}=\max\{H_{i,j-1}-q, F_{i,j-1}\} - e \\
 H_{ij}=\max\{H_{i-1,j-1}+S(i,j), E_{ij}, F_{ij}\}
 \end{array}\right.
-\end{equation*}
+\end{equation}
 This is AE86's formulation. In practice, we sometimes compute the cells in the
 following order
 \begin{equation}\label{eq:ae86}
@@ -230,7 +222,7 @@ affine gap cost $\gamma_1(k;q,e)=q+k\cdot e$}
 \caption{AE86's formulation with affine gap cost}\label{algo:ae86}
 \end{algorithm}
 
-\subsubsection{Effect of affine gap cost}
+\subsubsection{Effect of affine gap cost}\label{sec:affine-eff}
 
 For simplicity, we use one score $a>0$ for all types of matches and one cost
 $b>0$ for all types of mismatches. Ignore gaps for now. If the identity between
@@ -242,12 +234,11 @@ the perfect match will yield a higher alignment score and split the long gap in
 two. Gap open cost $q$ determines how easily a long gap to be split into two or
 more smaller gaps. Gap extension $e$ is directly related to $E$--$F$
 transitions: if $b>2e$, there may be insertions immediately followed by
-deletions. $q$ and $e$ together control the total number of gaps.  They must
-follow $2(q+e)>b$; otherwise the alignment would not contain any mismatches.
-Additionally, if $\lceil q/(b-2e)\rceil$ or more residues on the query adjacent
-to a gap are mismatches, the preferred alignment is to open a new gap and add
-both insertions and deletions of the same length. Generally, a small $e$ makes
-it more likely to explain away mismatches by introducing more gaps.
+deletions. $q$ and $e$ together control the total number of gaps. Suppose in a
+small region there are $x$ mismatches and one gap. We may achieve a better
+score by opening a new gap and add $2y$ gap extensions if $x\cdot b>q+2y\cdot
+e$, approximately. We also note that scoring must satisfy $2(q+e)>b$; otherwise
+the alignment would not contain any mismatches.
 
 \subsection{Affine gap cost: SIMD acceleration}
 
@@ -306,30 +297,36 @@ x_{ij}=\max\{0,x_{i-1,j}+v_{i-1,j}-z_{ij}+q\}-q-e\\
 y_{ij}=\max\{0,y_{i,j-1}+u_{i,j-1}-z_{ij}+q\}-q-e
 \end{array}\right.
 \end{equation}
-where $z'_{ij}$ is a temporary variable that does not need to be stored.
-We can prove that all variables in these equations are bounded by gap costs and
-the extreme match and mismatch scores, but not by the sequence lengths or the
-peak alignment score. For small scores, we can encode 16 cells in one SSE
-vector. In practice, SSE vectorization of Suzuki's formulation yields better
-performance for long sequences.
+where $z_{ij}$ is a temporary variable that does not need to be stored.  We can
+prove that all variables in these equations are bounded by gap costs and the
+extreme match and mismatch scores, but not by the sequence lengths or the peak
+alignment score. For small scores, we can encode 16 cells in one SSE vector. In
+practice, SSE vectorization of Suzuki's formulation yields better performance
+for long sequences.
 
 \subsection{Piece-wise affine gap cost}
 
-Affine gap cost still does not solve the long gap issue. Suppose the affine gap
-cost function is $\gamma_1(k)=q+k\cdot e$. Let $a>0$ be the max match score and
-$b>0$ the max mismatch cost.
-For a large $l$
-and noisy reads, it is not infrequent that a long gap to be split by errors. We
-would prefer to increase the gap open cost $q$ to avoid such a split, but this
-would contradict the high INDEL error rate of some sequencing data.
+Affine gap cost still has issues with long gaps. Recall that an exact match of
+length $\lceil q/(a+b)\rceil$ in the middle of a long gap splits the gap into
+two if moving this exact match to either edge of the gap leads to mismatches
+(Section~\ref{sec:affine-eff}). For noisy reads, it is not infrequent for a
+long gap to be split by incidental sequenceing errors. We would prefer to
+increase the gap open cost $q$ to avoid such a split, but this would contradict
+the high INDEL error rate of some sequencing data.
 
 The root cause of this dilemma is that gaps are caused by two different
 mechanisms: evolution which may create a long gap with one event, and
 sequencing errors which generate gaps as relatively independent events. A
-better gap cost is a concave function such that $\gamma(k+1)-\gamma(k)$ is
-smaller with larger $k$.
+better gap cost should be concave, such that $\gamma(k+1)-\gamma(k)$ is smaller
+with larger $k$.
 
-A simple concave gap cost is
+\citet{Miller:1988aa} found an $O(mn\log\max\{m,n\})$ algorithm for a concave
+gap cost function $\gamma(k)$. When $\gamma(k)$ is a piece-wise affine cost
+composed of $p$ affine cost functions. their algorithm finds the optimal
+alignment in $O(mn\log p)$ time. \citet{Gotoh:1990aa} proposed an $O(mn\cdot
+p)$ algorithm, which is simpler and probably faster for small $p$ in practice.
+
+When $p=2$, the two-piece affine cost takes the form
 \[
 \gamma_2(k;q,e,\tilde{q},\tilde{e})=\min\{q+k\cdot e,\tilde{q}+k\cdot\tilde{e}\}
 \]
@@ -347,9 +344,10 @@ F_{i,j+1}= \max\{H_{ij}-q,F_{ij}\}-e\\
 \tilde{F}_{i,j+1}= \max\{H_{ij}-\tilde{q},\tilde{F}_{ij}\}-\tilde{e}
 \end{array}\right.
 \end{equation}
-We may generalize Eq.~(\ref{eq:affine2}) to more pieces~\citep{Gotoh:1990aa} at the
-cost of performance. Eq.~(\ref{eq:suzuki}) can be extended to work with
-piece-wise affine cost in a similar manner.
+Eq.~(\ref{eq:suzuki}) can be extended to work with piece-wise affine cost in a
+similar manner.
+
+\end{methods}
 
 \bibliography{aln-dp}
 \end{document}
