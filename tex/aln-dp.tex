@@ -69,12 +69,14 @@ algorithm that guarantees to find the optimal solution if the edit distance is
 no larger than $k$. It is particularly fast if the distance is
 small~\citep{Sosic:2015aa}.
 
-\citet{Myers:1999aa} made an important observation that if we define
+Following the idea behind the 4-Russian problem~\citep{Arlazarov:1970aa},
+\citet{Wu:1996aa} made an important observation that the differences
+between adjacent cells
 \[\left\{\begin{array}{l}
 u_{ij}\triangleq H_{ij}-H_{i-1,j}\\
 v_{ij}\triangleq H_{ij}-H_{i,j-1}
 \end{array}\right.\]
-Eq.~(\ref{eq:ed}) can be transformed to
+only take values $-1$, $0$ or $1$. They transformed Eq.~(\ref{eq:ed}) to
 \begin{equation}
 \left\{\begin{array}{l}
 z_{ij}=\min\{1-\delta_{T[i],Q[j]},v_{i-1,j}+1,u_{i,j-1}+1\}\\
@@ -82,12 +84,12 @@ u_{ij}=z_{ij}-v_{i-1,j}\\
 v_{ij}=z_{ij}-u_{i,j-1}
 \end{array}\right.
 \end{equation}
-$u_{ij}$ and $v_{ij}$ only take values $-1$, $0$ or $1$. This enables bit-level
-parallelization, resulting in an $O(mn/w)$ algorithm where $w$ is the size of a
-machine word in bits. Combined with bounding~\citep{Ukkonen:1985aa}, Myers'
-algorithm is significantly faster than Eq.~(\ref{eq:ed}) for long sequences.
-Edlib~\citep{Sosic:2017aa} provides an efficient implementation of this
-algorithm with added functionality.
+and used a lookup table to speed up the computation. \citet{Myers:1999aa}
+furthered this idea with bit-level parallelization, resulting in an $O(mn/w)$
+algorithm where $w$ is the size of a machine word in bits. Combined with
+bounding~\citep{Ukkonen:1985aa}, Myers' algorithm is significantly faster than
+Eq.~(\ref{eq:ed}) for long sequences.  Edlib~\citep{Sosic:2017aa} provides an
+efficient implementation of this algorithm with added functionality.
 
 \subsection{Linear gap cost}
 
@@ -99,9 +101,13 @@ $H_{ij}$. It can be computed with
 H_{ij}=\max\{H_{i-1,j-1}+s(i,j), H_{i-1,j}-e, H_{i,j-1}-e\}
 \end{equation}
 This equation is a generalization of Eq.~(\ref{eq:ed}). It gives matches,
-mismatches and gaps different weights.  Typically, we require $2e$ to be larger
+mismatches and gaps different weights. Typically, we require $2e$ to be larger
 than the mismatch cost; otherwise the alignment would always prefer two gaps
 over a mismatch -- the final alignment would not contain any mismatches.
+
+The Needleman-Wunsch algorithm has a history of multiple inventions in
+different fields. Readers are referred to \citet{Navarro:2001aa} for a more
+complete survey.
 
 It is also possible to apply Myer's bit-parallelis to the linear gap cost
 if $s(i,j)$ and $e$ are small integers~\citep{Loving:2014aa}.
@@ -266,7 +272,7 @@ into one vector.
 For simplicity, we assume each vector consists of four elements.
 \citet{Wozniak:1997aa} put $(H_{ij},H_{i+1,j-1},H_{i+2,j-2},H_{i+3,j-3})$
 into a vector and fills the DP matrix along its diagonal.
-\citet{Rognes:2000aa} took a block of row cells into a vector
+\citet{Rognes:2000aa} took a block of column cells into a vector
 $(H_{ij},H_{i,j+1},H_{i,j+2},H_{i,j+3})$. \citet{Farrar:2007hs} interleaved rows
 into $(H_{ij},H_{i,t+j},H_{i,2t+j},H_{i,3t+j})$ in a striped manner, where
 $t=\lfloor(m+3)/4\rfloor$ -- the algorithm collates cells distant apart. In
@@ -337,9 +343,9 @@ When $p=2$, the two-piece affine cost takes the form
 \[
 \gamma_2(k;q,e,\tilde{q},\tilde{e})=\min\{q+k\cdot e,\tilde{q}+k\cdot\tilde{e}\}
 \]
-on the condition that $q+e<\tilde{q}+\tilde{e}$ and $e>\tilde{e}$. Effectively,
-this cost function applies $\gamma_1(k;q,e)$ to gaps shorter than
-$\lceil(\tilde{q}-q)/(e-\tilde{e})\rceil$ and applies
+It is concave on the condition that $q+e<\tilde{q}+\tilde{e}$ and
+$e>\tilde{e}$. Effectively, this cost function applies $\gamma_1(k;q,e)$ to
+gaps shorter than $\lceil(\tilde{q}-q)/(e-\tilde{e})\rceil$ and applies
 $\gamma_1(k;\tilde{q},\tilde{e})$ to longer gaps. We can compute the maximal
 alignment score under $\gamma_2(k)$ with
 \begin{equation}\label{eq:affine2}
