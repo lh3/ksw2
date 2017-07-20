@@ -153,14 +153,14 @@ Durbin's formulation allowing $E$--$F$ transitions becomes
 \left\{\begin{array}{l}
 E_{ij}=\max\{H_{i-1,j}-q, E_{i-1,j}\} - e \\
 F_{ij}=\max\{H_{i,j-1}-q, F_{i,j-1}\} - e \\
-H_{ij}=\max\{H_{i-1,j-1}+S(i,j), E_{ij}, F_{ij}\}
+H_{ij}=\max\{H_{i-1,j-1}+s(i,j), E_{ij}, F_{ij}\}
 \end{array}\right.
 \end{equation}
 This is AE86's formulation. In practice, we sometimes compute the cells in the
 following order
 \begin{equation}\label{eq:ae86}
 \left\{\begin{array}{l}
-H_{ij}=\max\{H_{i-1,j-1}+S(i,j), E_{ij}, F_{ij}\}\\
+H_{ij}=\max\{H_{i-1,j-1}+s(i,j), E_{ij}, F_{ij}\}\\
 E_{i+1,j}=\max\{H_{ij}-q, E_{ij}\} - e \\
 F_{i,j+1}=\max\{H_{ij}-q, F_{ij}\} - e
 \end{array}\right.
@@ -180,20 +180,22 @@ does not start with these initial values.
 
 AE86 can be impelmented in different ways depending on the order of computation
 and how row scores are stored. Algorithm~\ref{algo:ae86} gives one
-implementation. At the beginning of each iteration at line 1, $f=F_{ij}$,
+implementation. At the beginning of each iteration at line 2, $f=F_{ij}$,
 $h=H_{i,j-1}$, $H[j]=H_{i-1,j-1}$ and $E[j]=E_{ij}$. The loop computes
 $H$ in cell $(i,j)$, $E$ in the next row and $F$ in the next column.
+This algorithm uses a query profile at line 1. It is a common techique
+to accelerate the inner loop.
 
 \begin{algorithm}[tb]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{Targe sequence $T$ and query $Q$; scoring matrix $S(\cdot,\cdot)$ and
+\KwIn{Target sequence $T$ and query $Q$; scoring matrix $S(\cdot,\cdot)$ and
 affine gap cost $\gamma_1(k;q,e)=q+k\cdot e$}
 \KwOut{Best alignment score between $T$ and $Q$}
 \BlankLine
 \textbf{Function} {\sc AlignScore}$(T,Q,q,e)$
 \Begin {
-	\For (\Comment*[f]{Generate query profile}) {$a\in\Sigma$} {
+	\nl\For (\Comment*[f]{Generate query profile}) {$a\in\Sigma$} {
 		\For{$j\gets0$ \KwTo $|Q|-1$} {
 			$P[a][j]\gets S(Q[j],a)$\;
 		}
@@ -259,9 +261,9 @@ sequences at the same time. It is conceptually easier to implement and faster
 to run but it is tricky to use with other alignment routines. Intra-sequence
 algorithms align one sequence at a time. There are several ways to implement
 intra-sequence pairwise alignment, depending on how to organize multiple data
-into one vector.  For simplicity, we assume each vector consists of four
-elements.
+into one vector.
 
+For simplicity, we assume each vector consists of four elements.
 \citet{Wozniak:1997aa} put $(H_{ij},H_{i+1,j-1},H_{i+2,j-2},H_{i+3,j-3})$
 into a vector and fills the DP matrix along its diagonal.
 \citet{Rognes:2000aa} took a block of row cells into a vector
@@ -300,9 +302,14 @@ y_{ij}=\max\{0,y_{i,j-1}+u_{i,j-1}-z_{ij}+q\}-q-e
 where $z_{ij}$ is a temporary variable that does not need to be stored.  We can
 prove that all variables in these equations are bounded by gap costs and the
 extreme match and mismatch scores, but not by the sequence lengths or the peak
-alignment score. For small scores, we can encode 16 cells in one SSE vector. In
-practice, SSE vectorization of Suzuki's formulation yields better performance
-for long sequences.
+alignment score. For small scores, we can encode 16 cells in one SSE vector.
+
+In practice, Suzuki's formulation is about twice as slow as Algorithm~1 without
+SSE vectorization, because it involves more computation and cannot use
+a query profile. For long sequences when the peak score does not fit 16-bit
+integers, 16-way vectorized Suzuki's formulation is twice as fast as striped
+4-way vectorization~\citep{Farrar:2007hs}. Another advantage of Suzuki's
+algorithm is that it can be adapted for banded alignment.
 
 \subsection{Piece-wise affine gap cost}
 
@@ -310,7 +317,7 @@ Affine gap cost still has issues with long gaps. Recall that an exact match of
 length $\lceil q/(a+b)\rceil$ in the middle of a long gap splits the gap into
 two if moving this exact match to either edge of the gap leads to mismatches
 (Section~\ref{sec:affine-eff}). For noisy reads, it is not infrequent for a
-long gap to be split by incidental sequenceing errors. We would prefer to
+long gap to be split by incidental sequencing errors. We would prefer to
 increase the gap open cost $q$ to avoid such a split, but this would contradict
 the high INDEL error rate of some sequencing data.
 
@@ -322,7 +329,7 @@ with larger $k$.
 
 \citet{Miller:1988aa} found an $O(mn\log\max\{m,n\})$ algorithm for a concave
 gap cost function $\gamma(k)$. When $\gamma(k)$ is a piece-wise affine cost
-composed of $p$ affine cost functions. their algorithm finds the optimal
+composed of $p$ affine cost functions, their algorithm finds the optimal
 alignment in $O(mn\log p)$ time. \citet{Gotoh:1990aa} proposed an $O(mn\cdot
 p)$ algorithm, which is simpler and probably faster for small $p$ in practice.
 
