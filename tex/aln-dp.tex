@@ -273,7 +273,7 @@ For simplicity, we assume each vector consists of four elements.
 \citet{Wozniak:1997aa} put $(H_{ij},H_{i+1,j-1},H_{i+2,j-2},H_{i+3,j-3})$
 into a vector and fills the DP matrix along its diagonal.
 \citet{Rognes:2000aa} took a block of column cells into a vector
-$(H_{ij},H_{i,j+1},H_{i,j+2},H_{i,j+3})$. \citet{Farrar:2007hs} interleaved rows
+$(H_{ij},H_{i,j+1},H_{i,j+2},H_{i,j+3})$. \citet{Farrar:2007hs} interleaved columns
 into $(H_{ij},H_{i,t+j},H_{i,2t+j},H_{i,3t+j})$ in a striped manner, where
 $t=\lfloor(m+3)/4\rfloor$ -- the algorithm collates cells distant apart. In
 practice, Farrar's striped algorithm is the fastest and most often
