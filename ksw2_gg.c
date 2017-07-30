@@ -94,7 +94,7 @@ int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *ta
 	score = eh[qlen].h;
 	kfree(km, qp); kfree(km, eh);
 	if (m_cigar_ && n_cigar_ && cigar_) {
-		ksw_backtrack(km, 0, 0, z, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
+		ksw_backtrack(km, 0, 0, z, off, 0, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
 		kfree(km, z);
 		kfree(km, off);
 	}

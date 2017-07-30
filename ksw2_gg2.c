@@ -107,7 +107,7 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 	}
 	kfree(km, u); kfree(km, v); kfree(km, x); kfree(km, y); kfree(km, s); kfree(km, qr);
 	if (m_cigar_ && n_cigar_ && cigar_) {
-		ksw_backtrack(km, 1, 0, p, off, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
+		ksw_backtrack(km, 1, 0, p, off, 0, n_col, tlen-1, qlen-1, m_cigar_, n_cigar_, cigar_);
 		kfree(km, p); kfree(km, off);
 	}
 	return H0;

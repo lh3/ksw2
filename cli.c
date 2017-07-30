@@ -76,6 +76,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extf2_sse") == 0)   ksw_extf2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, mat[0], mat[1], e, w, zdrop, ez);
+	else if (strcmp(algo, "test") == 0) ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 4, 2, 24, 1, 751, 400, 8, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
@@ -142,13 +143,13 @@ int main(int argc, char *argv[])
 {
 	void *km = 0;
 	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 13, e2 = 1;
-	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = -1;
+	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = -1, no_kalloc = 0;
 	char *algo = "extd", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:K")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
@@ -156,6 +157,7 @@ int main(int argc, char *argv[])
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
 		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
+		else if (c == 'K') no_kalloc = 1;
 		else if (c == 'A') a = atoi(optarg);
 		else if (c == 'B') b = atoi(optarg);
 		else if (c == 'O') {
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 #ifdef HAVE_KALLOC
-	km = km_init();
+	km = no_kalloc? 0 : km_init();
 #endif
 	memset(&ez, 0, sizeof(ksw_extz_t));
 	ksw_gen_simple_mat(5, mat, a, -b);
