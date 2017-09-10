@@ -3,7 +3,7 @@ CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
 CPPFLAGS=	-DHAVE_KALLOC
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
-			ksw2_extd.o ksw2_extd2_sse.o ksw2_extf2_sse.o
+			ksw2_extd.o ksw2_extd2_sse.o ksw2_extf2_sse.o ksw2_exts2_sse.o
 PROG=		ksw2-test
 LIBS=		-lz
 

@@ -12,6 +12,8 @@
 #define KSW_EZ_APPROX_DROP 0x10 // approximate Z-drop; faster with sse
 #define KSW_EZ_EXTZ_ONLY   0x40 // only perform extension
 #define KSW_EZ_REV_CIGAR   0x80 // reverse CIGAR in the output
+#define KSW_EZ_SPLICE_FOR  0x100
+#define KSW_EZ_SPLICE_REV  0x200
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +55,9 @@ void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t 
 void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
 				   int8_t gapo, int8_t gape, int8_t gapo2, int8_t gape2, int w, int zdrop, int flag, ksw_extz_t *ez);
 
+void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
+				   int8_t gapo, int8_t gape, int8_t gapo2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez);
+
 void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t mch, int8_t mis, int8_t e, int w, int xdrop, ksw_extz_t *ez);
 
 /**
@@ -68,6 +73,9 @@ void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
+
+void *ksw_ll_qinit(void *km, int size, int qlen, const uint8_t *query, int m, const int8_t *mat);
+int ksw_ll_i16(void *q, int tlen, const uint8_t *target, int gapo, int gape, int *qe, int *te);
 
 #ifdef __cplusplus
 }
