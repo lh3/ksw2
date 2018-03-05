@@ -58,6 +58,7 @@ void align(const char *tseq, const char *qseq, int sc_mch, int sc_mis, int gapo,
 	uint8_t *ts, *qs, c[256];
 	ksw_extz_t ez;
 
+	memset(&ez, 0, sizeof(ksw_extz_t));
 	memset(c, 4, 256);
 	c['A'] = c['a'] = 0; c['C'] = c['c'] = 1;
 	c['G'] = c['g'] = 2; c['T'] = c['t'] = 3; // build the encoding table
