@@ -15,12 +15,12 @@
 
 #ifdef KSW_CPU_DISPATCH
 #ifdef __SSE4_1__
-void ksw_extz2_sse41(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez)
+void ksw_extz2_sse41(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 #else
-void ksw_extz2_sse2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez)
+void ksw_extz2_sse2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 #endif
 #else
-void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez)
+void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 #endif // ~KSW_CPU_DISPATCH
 {
 #define __dp_code_block1 \
@@ -50,7 +50,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), approx_max = !!(flag&KSW_EZ_APPROX_MAX);
 	int32_t *H = 0, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *sf, *mem, *mem2 = 0;
-	__m128i q_, qe2_, zero_, flag1_, flag2_, flag8_, flag16_, sc_mch_, sc_mis_, m1_, max_sc_;
+	__m128i q_, qe2_, zero_, flag1_, flag2_, flag8_, flag16_, sc_mch_, sc_mis_, sc_N_, m1_, max_sc_;
 	__m128i *u, *v, *x, *y, *s, *p = 0;
 
 	ksw_reset_extz(ez);
@@ -65,6 +65,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	flag16_ = _mm_set1_epi8(0x10);
 	sc_mch_ = _mm_set1_epi8(mat[0]);
 	sc_mis_ = _mm_set1_epi8(mat[1]);
+	sc_N_   = mat[m*m-1] == 0? _mm_set1_epi8(-e) : _mm_set1_epi8(mat[m*m-1]);
 	m1_     = _mm_set1_epi8(m - 1); // wildcard
 	max_sc_ = _mm_set1_epi8(mat[0] + (q + e) * 2);
 
@@ -88,7 +89,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		for (t = 0; t < tlen_ * 16; ++t) H[t] = KSW_NEG_INF;
 	}
 	if (with_cigar) {
-		mem2 = (uint8_t*)kmalloc(km, ((qlen + tlen - 1) * n_col_ + 1) * 16);
+		mem2 = (uint8_t*)kmalloc(km, ((size_t)(qlen + tlen - 1) * n_col_ + 1) * 16);
 		p = (__m128i*)(((size_t)mem2 + 15) >> 4 << 4);
 		off = (int*)kmalloc(km, (qlen + tlen - 1) * sizeof(int) * 2);
 		off_end = off + qlen + tlen - 1;
@@ -130,10 +131,11 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				tmp = _mm_cmpeq_epi8(sq, st);
 #ifdef __SSE4_1__
 				tmp = _mm_blendv_epi8(sc_mis_, sc_mch_, tmp);
+				tmp = _mm_blendv_epi8(tmp,     sc_N_,   mask);
 #else
-				tmp = _mm_or_si128(_mm_andnot_si128(tmp, sc_mis_), _mm_and_si128(tmp, sc_mch_));
+				tmp = _mm_or_si128(_mm_andnot_si128(tmp,  sc_mis_), _mm_and_si128(tmp,  sc_mch_));
+				tmp = _mm_or_si128(_mm_andnot_si128(mask, tmp),     _mm_and_si128(mask, sc_N_));
 #endif
-				tmp = _mm_andnot_si128(mask, tmp);
 				_mm_storeu_si128((__m128i*)((uint8_t*)s + t), tmp);
 			}
 		} else {
@@ -167,7 +169,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 #endif
 			}
 		} else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
-			__m128i *pr = p + r * n_col_ - st_;
+			__m128i *pr = p + (size_t)r * n_col_ - st_;
 			off[r] = st, off_end[r] = en;
 			for (t = st_; t <= en_; ++t) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
@@ -193,7 +195,7 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				_mm_store_si128(&pr[t], d);
 			}
 		} else { // gap right-alignment
-			__m128i *pr = p + r * n_col_ - st_;
+			__m128i *pr = p + (size_t)r * n_col_ - st_;
 			off[r] = st, off_end[r] = en;
 			for (t = st_; t <= en_; ++t) {
 				__m128i d, z, a, b, xt1, vt1, ut, tmp;
@@ -289,10 +291,14 @@ void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	if (!approx_max) kfree(km, H);
 	if (with_cigar) { // backtrack
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
-		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY))
+		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
 			ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col_*16, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
-		else if (ez->max_t >= 0 && ez->max_q >= 0)
+		} else if (!ez->zdropped && (flag&KSW_EZ_EXTZ_ONLY) && ez->mqe + end_bonus > (int)ez->max) {
+			ez->reach_end = 1;
+			ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col_*16, ez->mqe_t, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+		} else if (ez->max_t >= 0 && ez->max_q >= 0) {
 			ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col_*16, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+		}
 		kfree(km, mem2); kfree(km, off);
 	}
 }

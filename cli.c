@@ -72,16 +72,16 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	}
 	else if (strcmp(algo, "gg2_sse") == 0)     ez->score = ksw_gg2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
-	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, 0, flag, ez);
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
-	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
+	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, 0, flag, ez);
 	else if (strcmp(algo, "extf2_sse") == 0)   ksw_extf2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, mat[0], mat[1], e, w, zdrop, ez);
 	else if (strcmp(algo, "exts2_sse") == 0) {
 		int8_t mat[25];
 		ksw_gen_simple_mat(5, mat, 1, 2);
 		ksw_exts2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 2, 1, 32, 4, zdrop, flag|KSW_EZ_SPLICE_FOR, ez);
 	}
-	else if (strcmp(algo, "test") == 0) ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 4, 2, 24, 1, 751, 400, 8, ez);
+	else if (strcmp(algo, "test") == 0) ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 4, 2, 24, 1, 751, 400, 0, 8, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
