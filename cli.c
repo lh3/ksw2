@@ -144,6 +144,18 @@ static void print_aln(const char *tname, const char *qname, ksw_extz_t *ez)
 	putchar('\n');
 }
 
+#define REALLOC(ptr, len) ((ptr) = (__typeof__(ptr))realloc((ptr), (len) * sizeof(*(ptr))))
+
+#define EXPAND(a, m) do { \
+		(m) = (m)? (m) + ((m)>>1) : 16; \
+		REALLOC((a), (m)); \
+	} while (0)
+
+typedef struct {
+	char *name;
+	char *seq;
+} named_seq_t;
+
 int main(int argc, char *argv[])
 {
 	void *km = 0;
@@ -154,7 +166,7 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:K")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:Ka")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
@@ -165,6 +177,7 @@ int main(int argc, char *argv[])
 		else if (c == 'K') no_kalloc = 1;
 		else if (c == 'A') a = atoi(optarg);
 		else if (c == 'B') b = atoi(optarg);
+		else if (c == 'a') pair = 0;
 		else if (c == 'O') {
 			q = q2 = strtol(optarg, &s, 10);
 			if (*s == ',') q2 = strtol(s+1, &s, 10);
@@ -186,6 +199,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -B INT        mismatch penalty [%d]\n", b);
 		fprintf(stderr, "  -O INT[,INT]  gap open penalty [%d,%d]\n", q, q2);
 		fprintf(stderr, "  -E INT[,INT]  gap extension penalty [%d,%d]\n", e, e2);
+		fprintf(stderr, "  -a            all vs all\n");
 		return 1;
 	}
 #ifdef HAVE_KALLOC
@@ -210,6 +224,27 @@ int main(int argc, char *argv[])
 					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
 				print_aln(ks[0]->name.s, ks[1]->name.s, &ez);
 			}
+		} else {
+			int i, m_seq = 0, n_seq = 0;
+			named_seq_t *seq = 0;
+			while (kseq_read(ks[0]) > 0) {
+				named_seq_t *s;
+				if (n_seq == m_seq) EXPAND(seq, m_seq);
+				s = &seq[n_seq++];
+				s->name = strdup(ks[0]->name.s);
+				s->seq = strdup(ks[0]->seq.s);
+			}
+			while (kseq_read(ks[1]) > 0) {
+				for (i = 0; i < n_seq; ++i) {
+					global_aln(algo, km, ks[1]->seq.s, seq[i].seq, 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
+					print_aln(seq[i].name, ks[1]->name.s, &ez);
+				}
+			}
+			for (i = 0; i < n_seq; ++i) {
+				free(seq[i].name);
+				free(seq[i].seq);
+			}
+			free(seq);
 		}
 		kseq_destroy(ks[0]);
 		kseq_destroy(ks[1]);
