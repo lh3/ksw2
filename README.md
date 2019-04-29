@@ -16,6 +16,12 @@ using SSE2 and SSE4.1 intrinsics based on [Hajime Suzuki][hs]'s diagonal
 [formulation][hs-eq] which enables 16-way SSE parallelization for the most part
 of the inner loop, regardless of the maximum score of the alignment.
 
+KSW2 implements the Suzuki-Kasahara algorithm and is a component of
+[minimap2][mm2]. If you use KSW2 in your work, please cite:
+
+> * Suzuki, H. and Kasahara, M. (2018). Introducing difference recurrence relations for faster semi-global alignment of long sequences. *BMC Bioinformatics*, **19**:45.
+> * Li, H (2018) Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*, **34**:3094-3100.
+
 ## Usage
 
 Each `ksw2_*.c` file implements a single function and is independent of each
@@ -154,3 +160,4 @@ trying at some point.
 [swps3]: http://lab.dessimoz.org/swps3/
 [seqan]: http://seqan.de
 [piece-affine]: https://www.ncbi.nlm.nih.gov/pubmed/2165832
+[mm2]: https://github.com/lh3/minimap2
