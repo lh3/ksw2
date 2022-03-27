@@ -396,6 +396,14 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		} else if (ez->max_t >= 0 && ez->max_q >= 0) {
 			ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col_*16, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		}
+		if (flag & KSW_EZ_EQX) {
+			int32_t nc0 = ez->n_cigar;
+			uint32_t *ci0;
+			ci0 = (uint32_t*)kmalloc(km, nc0 * sizeof(uint32_t));
+			memcpy(ci0, ez->cigar, nc0 * sizeof(uint32_t));
+			ksw_cigar2eqx(km, query, target, nc0, ci0, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+			kfree(km, ci0);
+		}
 		kfree(km, mem2); kfree(km, off);
 	}
 }

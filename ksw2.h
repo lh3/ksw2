@@ -15,6 +15,7 @@
 #define KSW_EZ_SPLICE_FOR  0x100
 #define KSW_EZ_SPLICE_REV  0x200
 #define KSW_EZ_SPLICE_FLANK 0x400
+#define KSW_EZ_EQX         0x800
 
 // The subset of CIGAR operators used by ksw code.
 // Use MM_CIGAR_* from minimap.h if you need the full list.
@@ -22,6 +23,8 @@
 #define KSW_CIGAR_INS    1
 #define KSW_CIGAR_DEL    2
 #define KSW_CIGAR_N_SKIP 3
+#define KSW_CIGAR_EQ     7
+#define KSW_CIGAR_X      8
 
 #ifdef __cplusplus
 extern "C" {
@@ -155,6 +158,27 @@ static inline void ksw_backtrack(void *km, int is_rot, int is_rev, int min_intro
 		for (i = 0; i < n_cigar>>1; ++i) // reverse CIGAR
 			tmp = cigar[i], cigar[i] = cigar[n_cigar-1-i], cigar[n_cigar-1-i] = tmp;
 	*m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
+}
+
+static inline void ksw_cigar2eqx(void *km, const uint8_t *query, const uint8_t *target, int nc0, const uint32_t *ci0, int *mc1, int *nc1, uint32_t **ci1)
+{
+	int i, k, x = 0, y = 0;
+	*nc1 = 0;
+	for (k = 0; k < nc0; ++k) {
+		int op = ci0[k]&0xf, len = ci0[k]>>4;
+		if (op == KSW_CIGAR_MATCH) {
+			for (i = 0; i < len; ++i) {
+				if (target[x + i] == query[y + i]) ksw_push_cigar(km, nc1, mc1, *ci1, KSW_CIGAR_EQ, 1);
+				else ksw_push_cigar(km, nc1, mc1, *ci1, KSW_CIGAR_X, 1);
+			}
+			x += len, y += len;
+		} else {
+			ksw_push_cigar(km, nc1, mc1, *ci1, op, len);
+			if (op == KSW_CIGAR_DEL || op == KSW_CIGAR_N_SKIP) x += len;
+			else if (op == KSW_CIGAR_INS) y += len;
+			else if (op == KSW_CIGAR_EQ || op == KSW_CIGAR_X) x += len, y += len;
+		}
+	}
 }
 
 static inline void ksw_reset_extz(ksw_extz_t *ez)
