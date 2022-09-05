@@ -56,3 +56,4 @@ ksw2_extz2_sse.o: ksw2.h
 ksw2_gg.o: ksw2.h
 ksw2_gg2.o: ksw2.h
 ksw2_gg2_sse.o: ksw2.h
+ksw2_extd2.o: ksw2.h
