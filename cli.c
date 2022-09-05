@@ -82,6 +82,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 		ksw_exts2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 2, 1, 32, 4, zdrop, 0, flag|KSW_EZ_SPLICE_FOR, 0, ez);
 	}
 	else if (strcmp(algo, "test") == 0) ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 4, 2, 24, 1, 751, 400, 0, 8, ez);
+	else if (strcmp(algo, "extd2") == 0) ksw_extd2_c(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, 0, flag, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
