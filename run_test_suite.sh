@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 if [ -z "$KSW2" ]; then
     KSW2=./ksw2-test
 fi

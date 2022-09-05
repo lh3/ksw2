@@ -75,17 +75,25 @@ void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 
 void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t mch, int8_t mis, int8_t e, int w, int xdrop, ksw_extz_t *ez);
 
+void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen,
+                 const uint8_t *target, int8_t m, const int8_t *mat, int8_t q,
+                 int8_t e, int8_t q2, int8_t e2, int w, int zdrop,
+                 int end_bonus, int flag, ksw_extz_t *ez);
+
 /**
  * Global alignment
  *
  * (first 10 parameters identical to ksw_extz_sse())
  * @param m_cigar   (modified) max CIGAR length; feed 0 if cigar==0
  * @param n_cigar   (out) number of CIGAR elements
- * @param cigar     (out) BAM-encoded CIGAR; caller need to deallocate with kfree(km, )
+ * @param cigar     (out) BAM-encoded CIGAR; caller need to deallocate with
+ * kfree(km, )
  *
  * @return          score of the alignment
  */
-int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
+int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen,
+           const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
+           int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 
