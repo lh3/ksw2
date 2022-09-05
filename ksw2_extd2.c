@@ -32,12 +32,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 				   int8_t q, int8_t e, int8_t q2, int8_t e2, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 {
 
-	// debug
-	if (!align_score_file) {
-		align_score_file = fopen("debug/test_sample_score.output", "w");
-		fprintf(align_score_file, "(r, t | u, v, x, y)\n");
-	}
-
 	int r, t, qe = q + e, n_col, *off = 0, *off_end = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc, min_sc, long_thres, long_diff;
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), approx_max = !!(flag&KSW_EZ_APPROX_MAX);
 	int32_t *H = 0, H0 = 0, last_H0_t = 0;
@@ -120,7 +114,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		if (en > (r+wl)>>1) en = (r+wl)>>1; // take the floor, choose the band position
 		if (st > en) {
 			ez->zdropped = 1;
-			printf("break 1\n"); // debug
 			break;
 		}
 		st0 = st, en0 = en;   // Store the orignal st and en into st0 and en0
@@ -500,7 +493,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			if (r - st0 == qlen - 1 && H[st0] > ez->mqe)
 				ez->mqe = H[st0], ez->mqe_t = st0;
 			if (ksw_apply_zdrop(ez, 1, max_H, r, max_t, zdrop, e2)) {
-				printf("break 2\n"); // debug
 				break;
 			}
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
@@ -519,7 +511,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 				}
 			} else H0 = v8[0] - qe, last_H0_t = 0;
 			if ((flag & KSW_EZ_APPROX_DROP) && ksw_apply_zdrop(ez, 1, H0, r, last_H0_t, zdrop, e2)) {
-				printf("break 3\n"); // debug
 				break;
 			}
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
@@ -527,12 +518,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		}
 		
 		last_st = st, last_en = en;
-		
-		// debug output
-		for (t = st0; t <= en0; ++t) {
-			fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t]); // for debugging
-		}
-		fprintf(align_score_file, "\n");
 		
 	}
 	kfree(km, mem);
