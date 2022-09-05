@@ -249,7 +249,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		// !SCORE_ONLY && !RIGHT
 		// !0x01 && !0x02
 		else if (!(flag&KSW_EZ_RIGHT)) { // gap left-alignment
-			uint8_t *pr = p + r * n_col - st; // p is the matrix to store all the data when doing DP.
+			uint8_t *pr = p + (size_t)r * n_col - st; // p is the matrix to store all the data when doing DP.
 			off[r] = st, off_end[r] = en;
 			int8_t u_new, v_new, x_new, y_new, x2_new, y2_new;
 			int8_t u_next, v_next, x_next, y_next, x2_next, y2_next;
@@ -353,7 +353,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		// !SCORE_ONLY && RIGHT
 		// !0x01 && 0x02
 		else { // gap right-alignment
-			uint8_t *pr = p + r * n_col - st; // p is the matrix to store all the data when doing DP.
+			uint8_t *pr = p + (size_t)r * n_col - st; // p is the matrix to store all the data when doing DP.
 			off[r] = st, off_end[r] = en; // off is a r_length*2 length int array, off_end is the pointer to the middle
 			int8_t u_new, v_new, x_new, y_new, x2_new, y2_new;
 			int8_t u_next, v_next, x_next, y_next, x2_next, y2_next;
