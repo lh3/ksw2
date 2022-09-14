@@ -34,11 +34,11 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 
 	// debug
 	if (!align_score_file) {
-		align_score_file = fopen("debug/test_sample_score.output", "w");
-		fprintf(align_score_file, "(r, t | u, v, x, y)\n");
+		align_score_file = fopen("debug/test_extd2.output", "w+");
 	}
+    fprintf(align_score_file, "(r, t | u, v, x, y, x2, y2, H)\n");
 
-	int r, t, qe = q + e, n_col, *off = 0, *off_end = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc, min_sc, long_thres, long_diff;
+    int r, t, qe = q + e, n_col, *off = 0, *off_end = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc, min_sc, long_thres, long_diff;
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), approx_max = !!(flag&KSW_EZ_APPROX_MAX);
 	int32_t *H = 0, H0 = 0, last_H0_t = 0;
 	uint8_t *qr, *sf, *mem, *mem2 = 0;
@@ -125,7 +125,10 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		}
 		st0 = st, en0 = en;   // Store the orignal st and en into st0 and en0
 
-		if (st > 0) {
+        // fprintf(align_score_file, "n_col %d r %d w %d st %d en %d\n", n_col, r,
+        //         w, st, en);
+
+        if (st > 0) {
 			if (st - 1 >= last_st && st - 1 <= last_en) {
 				x1 = x[st - 1], x21 = x2[st - 1], v1 = v[st - 1]; // (r-1,s-1) calculated in the last round
 			} else {  // else means cannot use at least one "pre-value" in the last round
@@ -161,9 +164,9 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 					}
 				}
 				*(s+t) = score;
-			}
+            }
 
-		} else {
+        } else {
 			for (t = st; t <= en; ++t)
 				((uint8_t*)s)[t] = mat[sf[t] * m + qrr[t]];  // Preprocess the score, matrix is like a lookup table.
 		}
@@ -346,7 +349,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 					y[t] = y_new;
 					x2[t] = x2_new;
 					y2[t] = y2_new;
-					break;
+                    break;
 				}
 				u_next = u_new;
 				v_next = v_new;
@@ -354,8 +357,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 				y_next = y_new;
 				x2_next = x2_new;
 				y2_next = y2_new;
-
-			}
+            }
 		} 
 		// !SCORE_ONLY && RIGHT
 		// !0x01 && 0x02
@@ -505,7 +507,8 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			}
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H[tlen - 1];
-		} else { // find approximate max; Z-drop might be inaccurate, too.
+            // fprintf(align_score_file, "Hmax %d max_t %d max_q %d\n", ez->max, ez->max_t, ez->max_q);
+        } else { // find approximate max; Z-drop might be inaccurate, too.
 			if (r > 0) {
 				if (last_H0_t >= st0 && last_H0_t <= en0 && last_H0_t + 1 >= st0 && last_H0_t + 1 <= en0) {
 					int32_t d0 = v8[last_H0_t];
@@ -525,13 +528,13 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;
 		}
-		
-		last_st = st, last_en = en;
+
+        last_st = st, last_en = en;
 		
 		// debug output
 		for (t = st0; t <= en0; ++t) {
-			fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t]); // for debugging
-		}
+			fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d,%d,%d,%d)\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y[t]), ((int8_t*)x2)[t], ((int8_t*)y2)[t], ((int8_t*)H)[t]); // for debugging
+        }
 		fprintf(align_score_file, "\n");
 		
 	}
