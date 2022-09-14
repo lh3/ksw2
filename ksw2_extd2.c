@@ -36,7 +36,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 	if (!align_score_file) {
 		align_score_file = fopen("debug/test_extd2.output", "w+");
 	}
-    fprintf(align_score_file, "(r, t | u, v, x, y, x2, y2, H)\n");
+    fprintf(align_score_file, "(r, t | u, v, x, y, x2, y2, H, d)\n");
 
     int r, t, qe = q + e, n_col, *off = 0, *off_end = 0, tlen_, qlen_, last_st, last_en, wl, wr, max_sc, min_sc, long_thres, long_diff;
 	int with_cigar = !(flag&KSW_EZ_SCORE_ONLY), approx_max = !!(flag&KSW_EZ_APPROX_MAX);
@@ -106,7 +106,14 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 	for (t = 0; t < qlen; ++t) qr[t] = query[qlen - 1 - t]; //qr is query reverse
 	memcpy(sf, target, tlen); // sf = reference chain
 
-	for (r = 0, last_st = last_en = -1; r < qlen + tlen - 1; ++r) {   //Outer for loop, last_st = "last start", "last end"
+    if (!with_cigar)
+        fprintf(align_score_file, "Score only\n");
+    else if (flag & KSW_EZ_RIGHT)
+        fprintf(align_score_file, "right aligned\n");
+    else
+        fprintf(align_score_file, "left aligned\n");
+
+    for (r = 0, last_st = last_en = -1; r < qlen + tlen - 1; ++r) {   //Outer for loop, last_st = "last start", "last end"
 	//for (r = 0, last_st = last_en = -1; r < 0; ++r) {   // debug
 		int st = 0, en = tlen - 1, st0, en0; // , st_, en_; // r is iteration index of organal; t_len is at x axis, q_len is the atg y_axis
 		int8_t x1, x21, v1;
@@ -176,7 +183,7 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		v1_  = v1;
 		assert(en - st + 1 <= n_col);
 
-		// SCORE_ONLY
+        // SCORE_ONLY
 		// 0x01
 		if (!with_cigar) { // score only
 			int8_t u_new, v_new, x_new, y_new, x2_new, y2_new;
@@ -507,7 +514,6 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 			}
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H[tlen - 1];
-            // fprintf(align_score_file, "Hmax %d max_t %d max_q %d\n", ez->max, ez->max_t, ez->max_q);
         } else { // find approximate max; Z-drop might be inaccurate, too.
 			if (r > 0) {
 				if (last_H0_t >= st0 && last_H0_t <= en0 && last_H0_t + 1 >= st0 && last_H0_t + 1 <= en0) {
@@ -533,13 +539,25 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen, const uint8
 		
 		// debug output
 		for (t = st0; t <= en0; ++t) {
-			fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d,%d,%d,%d)\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y[t]), ((int8_t*)x2)[t], ((int8_t*)y2)[t], ((int8_t*)H)[t]); // for debugging
+			fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d,%d,%d,%d,0x%x)\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y[t]), ((int8_t*)x2)[t], ((int8_t*)y2)[t], H[t], ((uint8_t*)p)[r*n_col-st0+t]); // for debugging
         }
 		fprintf(align_score_file, "\n");
 		
 	}
-	kfree(km, mem);
-	if (!approx_max) kfree(km, H);
+    fprintf(
+        align_score_file,
+        "ez: max %d zdropped %d max_q %d max_t %d mte %d mte_q %d score %d\np:",
+        ez->max, ez->zdropped, ez->max_q, ez->max_t, ez->mte, ez->mte_q,
+        ez->score);
+
+    for (int i = 0; i < qlen + tlen -1; i++){
+        for (int j = 0; j < n_col; j++)
+			fprintf(align_score_file, "%d ", p[i*n_col + j]);
+        fprintf(align_score_file, "\n");
+    }
+
+    kfree(km, mem);
+    if (!approx_max) kfree(km, H);
 	if (with_cigar) { // backtrack
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
