@@ -14,6 +14,9 @@ KSEQ_INIT(gzFile, gzread)
 #include "parasail.h"
 #endif
 
+#include <stdio.h>
+FILE *align_score_file;
+
 unsigned char seq_nt4_table[256] = {
 	0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
 	4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
@@ -75,14 +78,18 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, 0, flag, ez);
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, 0, flag, ez);
-	// NOTE: add our non-sse version of alignment
+	// NOTE: add our c version of alignment
     else if (strcmp(algo, "extd2") == 0)
         ksw_extd2_c(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, m, mat, q,
                     e, q2, e2, w, zdrop, 0, flag, ez);
+	// NOTE: add out updated c version of alignment
+	else if (strcmp(algo, "extd2_cpp") == 0)
+        ksw_extd2_cpp(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, m, mat,
+                      q, e, q2, e2, w, zdrop, 0, flag, ez);
     else if (strcmp(algo, "extf2_sse") == 0)
         ksw_extf2_sse(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, mat[0],
                       mat[1], e, w, zdrop, ez);
-	else if (strcmp(algo, "exts2_sse") == 0) {
+    else if (strcmp(algo, "exts2_sse") == 0) {
 		int8_t mat[25];
 		ksw_gen_simple_mat(5, mat, 1, 2);
 		ksw_exts2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 2, 1, 32, 4, zdrop, 0, flag|KSW_EZ_SPLICE_FOR, 0, ez);

@@ -80,6 +80,11 @@ void ksw_extd2_c(void *km, int qlen, const uint8_t *query, int tlen,
                  int8_t e, int8_t q2, int8_t e2, int w, int zdrop,
                  int end_bonus, int flag, ksw_extz_t *ez);
 
+void ksw_extd2_cpp(void *km, int qlen, const uint8_t *query, int tlen,
+                   const uint8_t *target, int8_t m, const int8_t *mat, int8_t q,
+                   int8_t e, int8_t q2, int8_t e2, int w, int zdrop,
+                   int end_bonus, int flag, ksw_extz_t *ez);
+
 /**
  * Global alignment
  *
