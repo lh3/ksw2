@@ -238,7 +238,7 @@ __inline__ int ksw_update_diag	(
         int8_t prev_y = y[t_i_1 + 1];    // y_{i,j-1}
         int8_t prev_x2 = x2[t_i_1];      // x2_{i-1,j}
         int8_t prev_y2 = y2[t_i_1 + 1];  // y2_{i,j-1}
-        int8_t prev_H = (t == t_en) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
+        int8_t prev_H = (t == t_en && get_i(t, r, n_col) > 0) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
 
         // update KZ matrix
         if (t >= 1){
@@ -288,6 +288,10 @@ __inline__ int ksw_update_diag	(
         u_new = z - prev_v;
         v_new = z - prev_u;
 
+        if (r == 0) {
+            prev_H = v_new-q-e;    // v[t_st]-q-e
+        }
+
         if (SCORE_ONLY){
             ksw_cal_xy(&x_new, prev_x, prev_v, z, q, e);
             ksw_cal_xy(&y_new, prev_y, prev_u, z, q, e);
@@ -309,8 +313,12 @@ __inline__ int ksw_update_diag	(
         }
 
         /* Calculate H anyways: for GPU */
-        if (t_en > 0 && t == t_en) {  // special casting the last element
-            H_new = prev_H + u_new;
+        if (t == t_en) {
+            if (get_i(t, r, n_col) > 0) {  // special casting the last element
+                H_new = prev_H + u_new;
+            } else {
+                H_new = prev_H;
+            }
         } else {
             H_new = prev_H + v_new;
         }
@@ -320,7 +328,9 @@ __inline__ int ksw_update_diag	(
             Hmax[t] = H_new;
             rmax[t] = r;
         }
+        fprintf(align_debug_file, "%d|%d ", prev_H, H_new);
     }
+    fprintf(align_debug_file, "\n");
     // update KZ matrix
     u[n_col] = u_new;
     v[n_col] = v_new;
@@ -399,6 +409,14 @@ void ksw_extd2_cpp(
     n_col = qlen < tlen ? qlen : tlen;
     n_col = n_col < (w + 1) ? n_col : w + 1;
 
+    int full_query = 0;
+    int full_target = 0;
+    if (n_col == qlen) {
+        full_query = 1;
+        n_col = tlen;
+    }
+    int real_n_col = qlen < n_col ? qlen : n_col;
+
     /* Allocate memory & initialize intermediate value */
 	// n_col + 1 is enough for u, v, x, y, x2, y2, s
     /* u, v, x, y, x2, y2, sc, H, Hmax, rmax INDEXING (by t):
@@ -423,7 +441,7 @@ void ksw_extd2_cpp(
     sc = (int8_t *)kmalloc(km, n_col + 1);
 
     H = (int32_t*)kmalloc(km, (n_col+1) * sizeof(int32_t));
-    for (int t = 0; t <= n_col; ++t) H[t] = -q - e;
+    for (int t = 0; t <= n_col; ++t) H[t] = KSW_NEG_INF;
     Hmax = (int32_t *)kmalloc(km, (n_col + 1) * sizeof(int32_t));
     for (int t = 0; t <= n_col; ++t) Hmax[t] = KSW_NEG_INF; // Hmax[i] = -inf
     rmax = (int *)kmalloc(km, (n_col + 1) * sizeof(int));
@@ -447,8 +465,6 @@ void ksw_extd2_cpp(
         fprintf(align_debug_file, "left aligned\n");
 
     int t_st, t_en;
-    int full_query = 0;
-    int full_target = 0;
     for (int r = 0; r < qlen + tlen - 1; ++r) {   // r: iterate through anti-diag
 
         /* NOTE: find anti-diag boundaries (in terms of i) */
@@ -466,26 +482,15 @@ void ksw_extd2_cpp(
 
         t_st = get_t(st, r, n_col);
         t_en = get_t(en, r, n_col);
-        full_query = full_query ? 1 : t_en >= qlen ? 1 : 0;
-        full_target = full_target ? 1 : t_st <= 0 ? 1 : 0;
-        if (full_query || full_target) {
-            t_st = 0;
-            t_en = t_st + en - st;
-        }
+
         int t_i_1 = -1 + ((r + n_col - 1) & 0x1);
-        if (full_target && t_i_1 != -1) {
-            t_i_1--;
-        }
-        if (full_query && t_i_1 == -1) {
-            t_i_1++;
-        }
 
         // DEBUG:
         if (!align_debug_file) {
             align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         }
-        fprintf(align_debug_file, "n_col %d r %d w %d st %d en %d t_st %d t_i_1 %d t_en %d\n", n_col, r, w, st, en, t_st, t_i_1 + t_st, 
-               t_en);
+        // fprintf(align_debug_file, "n_col %d r %d w %d st %d en %d t_st %d t_i_1 %d t_en %d\n", n_col, r, w, st, en, t_st, t_i_1 + t_st, 
+        //        t_en);
         assert(en - st + 1 <= n_col);
         assert(t_en <= n_col + 1);
 
@@ -552,11 +557,11 @@ void ksw_extd2_cpp(
             if (!align_debug_file) {
                 align_debug_file = fopen("debug/test_sample_debug.output", "w+");
             }
-            fprintf(align_debug_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
-                    r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
-                    ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
-                    ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
-                    ((int *)rmax)[t], p[r*n_col - t_st + t]);  // for debugging
+            // fprintf(align_debug_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
+            //         r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
+            //         ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
+            //         ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
+            //         ((int *)rmax)[t], p[r*n_col - t_st + t]);  // for debugging
             if (!align_score_file) {
                 align_score_file = fopen("debug/test_sample_score.output", "w+");
                 fprintf(align_score_file, "(r, t | u, v, x, y)\n");
@@ -569,15 +574,15 @@ void ksw_extd2_cpp(
         if (!align_debug_file) {
             align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         }
-        fprintf(align_debug_file, "\n");
+        // fprintf(align_debug_file, "\n");
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
 
     // NOTE: find max for ez
     for (int t = 1; t <= n_col; ++t){
         if (Hmax[t] > (int32_t)ez->max){
             ez->max = Hmax[t];
-            ez->max_t = get_i(t, rmax[t], n_col);
-            ez->max_q = rmax[t] - ez->max_t;
+            ez->max_t = get_i(t, rmax[t], n_col);   // max_t
+            ez->max_q = rmax[t] - ez->max_t;        // r - max_t
         }
     }
 
@@ -589,7 +594,7 @@ void ksw_extd2_cpp(
         ez->max, ez->zdropped, ez->max_q, ez->max_t, ez->mte, ez->mte_q,
         ez->score);
     // for (int i = 0; i < qlen + tlen - 1; i++) {
-    //     for (int j = 0; j < n_col; j++)
+    //     for (int j = 0; j < real_n_col; j++)
     //         fprintf(align_debug_file, "%d ", p[i * n_col + j]);
     //     fprintf(align_debug_file, "\n");
     // }
@@ -614,12 +619,17 @@ void ksw_extd2_cpp(
     if (with_cigar) { // backtrack
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
+        printf("backtrack 1\n");
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		} else if (!ez->zdropped && (flag&KSW_EZ_EXTZ_ONLY) && ez->mqe + end_bonus > (int)ez->max) {
 		ez->reach_end = 1;
+        printf("backtrack 2\n");
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, ez->mqe_t, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		} else if (ez->max_t >= 0 && ez->max_q >= 0) {
+        printf("backtrack 3\n");
+        printf("rev_cigar: %d, max_t: %d, max_q: %d\n", rev_cigar, ez->max_t, ez->max_q);
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
+        printf("m_cigar: %d, n_cigar: %d\n", ez->m_cigar, ez->n_cigar);
 		}
 		kfree(km, p); kfree(km, off);
 	}
