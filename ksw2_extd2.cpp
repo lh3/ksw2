@@ -501,11 +501,6 @@ void ksw_extd2_cpp(
         int t_i_1 = -1 + ((r + n_col - 1) & 0x1);
 
         // DEBUG:
-        if (!align_debug_file) {
-            align_debug_file = fopen("debug/test_sample_debug.output", "w+");
-        }
-        // fprintf(align_debug_file, "n_col %d r %d w %d st %d en %d t_st %d t_i_1 %d t_en %d\n", n_col, r, w, st, en, t_st, t_i_1 + t_st, 
-        //        t_en);
         assert(en - st + 1 <= n_col);
         assert(t_en <= n_col + 1);
 
@@ -646,17 +641,12 @@ void ksw_extd2_cpp(
     if (with_cigar) { // backtrack
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
-        // printf("backtrack 1\n");
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		} else if (!ez->zdropped && (flag&KSW_EZ_EXTZ_ONLY) && ez->mqe + end_bonus > (int)ez->max) {
 		ez->reach_end = 1;
-        // printf("backtrack 2\n");
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, ez->mqe_t, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
 		} else if (ez->max_t >= 0 && ez->max_q >= 0) {
-        // printf("backtrack 3\n");
-        // printf("rev_cigar: %d, max_t: %d, max_q: %d\n", rev_cigar, ez->max_t, ez->max_q);
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, ez->max_t, ez->max_q, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
-        // printf("m_cigar: %d, n_cigar: %d\n", ez->m_cigar, ez->n_cigar);
 		}
 		kfree(km, p); kfree(km, off);
 	}
