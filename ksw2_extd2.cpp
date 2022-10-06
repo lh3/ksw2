@@ -7,6 +7,10 @@
 #include <assert.h>
 #include "ksw2.h"
 
+
+// #define PRINT
+
+
 #ifdef __SSE2__
 #ifdef USE_SIMDE
 #include <simde/x86/sse2.h>
@@ -27,6 +31,7 @@
 #endif
 
 extern FILE *align_score_file;
+FILE *align_debug_file;
 
 /* return non-zero if we won't see any mismatches */
 __inline__ int ksw_check_par(const int8_t m, const int8_t *mat, const int8_t q,
@@ -40,10 +45,14 @@ __inline__ int ksw_check_par(const int8_t m, const int8_t *mat, const int8_t q,
     return 0;
 }
 
-__inline__ int get_t(int i, int r, int n_col) { return i + ((n_col-1-r) & 1 ? (n_col-r-2)/2:(n_col-r-1)/2) + 1; }
+__inline__ int get_t(int i, int r, int n_col) { 
+    int offset = (n_col-1-r) & 1 ? (n_col-r-2)/2:(n_col-r-1)/2;
+    return i + offset + 1; 
+}
 
 __inline__ int get_i(int t, int r, int n_col) {
-    return t - 1 - ((n_col - r - 1) & 1 ? (n_col-r-2)/2:(n_col-r-1)/2);
+    int offset = (n_col - r - 1) & 1 ? (n_col-r-2)/2:(n_col-r-1)/2;
+    return t - 1 - offset;
 }
 
 /* calculation z: max{ 	sc_{i,j},
@@ -233,7 +242,7 @@ int ksw_update_diag	(
         int8_t prev_y = y[t_i_1 + 1];    // y_{i,j-1}
         int8_t prev_x2 = x2[t_i_1];      // x2_{i-1,j}
         int8_t prev_y2 = y2[t_i_1 + 1];  // y2_{i,j-1}
-        int8_t prev_H = (t == t_en) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
+        int32_t prev_H = (t == t_en && get_i(t, r, n_col) > 0) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
 
         // update KZ matrix
         if (t >= 1){
@@ -244,10 +253,12 @@ int ksw_update_diag	(
             x2[t-1] = x2_new;
             y2[t-1] = y2_new;
             H[t-1] = H_new;
-            // if (t >= t_st && t <= t_en+1)
-            //     fprintf(align_score_file,
-            //             "t %d, s %d, u %d, v %d, x %d,  y %d, x2 %d, y2 %d H %d\n", t - 1, sc[t-1],
-            //             u_new, v_new, x_new, y_new, x2_new, y2_new, H_new);
+            #ifdef PRINT
+            if (t >= t_st && t <= t_en+1)
+                fprintf(align_debug_file,
+                        "t %d, s %d, u %d, v %d, x %d,  y %d, x2 %d, y2 %d H %d\n", t - 1, sc[t-1],
+                        u_new, v_new, x_new, y_new, x2_new, y2_new, H_new);
+            #endif
         }
 
         /* set default value */
@@ -264,10 +275,12 @@ int ksw_update_diag	(
             continue;
         }
 
-        // fprintf(align_score_file,
-        //         "t %d sc %d t_i_1 %d prev_u %d, prev_v %d, prev_x %d, prev_y %d, prev_x2 %d, "
-        //         "prev_y2 %d prev_H %d\n",
-        //         t, sc_elt, t_i_1, prev_u, prev_v, prev_x, prev_y, prev_x2, prev_y2, prev_H);
+        #ifdef PRINT
+        fprintf(align_debug_file,
+                "t %d sc %d t_i_1 %d prev_u %d, prev_v %d, prev_x %d, prev_y %d, prev_x2 %d, "
+                "prev_y2 %d prev_H %d\n",
+                t, sc_elt, t_i_1, prev_u, prev_v, prev_x, prev_y, prev_x2, prev_y2, prev_H);
+        #endif
 
         int8_t d, z;
         if (SCORE_ONLY){ // score only
@@ -279,9 +292,15 @@ int ksw_update_diag	(
             d = ksw_cal_z_right_aligned(&z, sc_elt, prev_u, prev_v, prev_x, prev_y,
                                         prev_x2, prev_y2, mm0);
         }
-        // fprintf(align_score_file, "t %d t_{i-1} %d z %d prev_v %d prev_u %d\n", t, t_i_1, z, prev_v, prev_u);
+        #ifdef PRINT
+        fprintf(align_debug_file, "t %d t_{i-1} %d z %d prev_v %d prev_u %d\n", t, t_i_1, z, prev_v, prev_u);
+        #endif
         u_new = z - prev_v;
         v_new = z - prev_u;
+
+        if (r == 0) {
+            prev_H = (int32_t)v_new-(int32_t)q-(int32_t)e;    // v[t_st]-q-e
+        }
 
         if (SCORE_ONLY){
             ksw_cal_xy(&x_new, prev_x, prev_v, z, q, e);
@@ -294,7 +313,6 @@ int ksw_update_diag	(
             d = ksw_cal_xy_left_aligned(&x2_new, prev_x2, prev_v, z, q2, e2) ? d | 0x20 : d;
             d = ksw_cal_xy_left_aligned(&y2_new, prev_y2, prev_u, z, q2, e2) ? d | 0x40 : d;
             p[t] = (uint8_t)d;
-            // fprintf(align_score_file, "(left) t %d d %x\n", t, d);
         } else {
             d = ksw_cal_xy_right_aligned(&x_new, prev_x, prev_v, z, q, e) ? d | 0x08 : d;
             d = ksw_cal_xy_right_aligned(&y_new, prev_y, prev_u, z, q, e) ? d | 0x10 : d;
@@ -304,10 +322,14 @@ int ksw_update_diag	(
         }
 
         /* Calculate H anyways: for GPU */
-        if (t_en > 0 && t == t_en) {  // special casting the last element
-            H_new = prev_H + u_new;
+        if (t == t_en) {
+            if (get_i(t, r, n_col) > 0) {  // special casting the last element
+                H_new = prev_H + (int32_t)u_new;
+            } else {
+                H_new = prev_H;
+            }
         } else {
-            H_new = prev_H + v_new;
+            H_new = prev_H + (int32_t)v_new;
         }
 
         // update H max & t max
@@ -315,7 +337,13 @@ int ksw_update_diag	(
             Hmax[t] = H_new;
             rmax[t] = r;
         }
+        #ifdef PRINT
+        fprintf(align_debug_file, "%d|%d ", prev_H, H_new);
+        #endif
     }
+    #ifdef PRINT
+    fprintf(align_debug_file, "\n");
+    #endif
     // update KZ matrix
     u[n_col] = u_new;
     v[n_col] = v_new;
@@ -343,12 +371,14 @@ void ksw_extd2_cpp(
     ksw_extz_t *ez  // score and cigar
 ) {
     // debug
-	//if (!align_score_file) {
-	//	align_score_file = fopen("debug/test_sample_score.output", "w+");
-	//}
-    //fprintf(align_score_file, "q %d e %d q2 %d e2 %d\n", q, e, q2, e2);
-    //fprintf(align_score_file,
-    //        "(r, t, i | u, v, x, y, x2, y2, H, Hmax, rmax, p)\n");
+	if (!align_debug_file) {
+		align_debug_file = fopen("debug/test_sample_debug.output", "w+");
+	}
+    #ifdef PRINT
+    fprintf(align_debug_file, "q %d e %d q2 %d e2 %d\n", q, e, q2, e2);
+    fprintf(align_debug_file,
+            "(r, t, i | u, v, x, y, x2, y2, H, Hmax, rmax, p)\n");
+    #endif
 
     /* Score Generation parameters */
     int long_thres, long_diff; // derived from q, e.
@@ -394,6 +424,14 @@ void ksw_extd2_cpp(
     n_col = qlen < tlen ? qlen : tlen;
     n_col = n_col < (w + 1) ? n_col : w + 1;
 
+    int full_query = 0;
+    int full_target = 0;
+    if (n_col == qlen) {
+        full_query = 1;
+        n_col = tlen;
+    }
+    int real_n_col = qlen < n_col ? qlen : n_col;
+
     /* Allocate memory & initialize intermediate value */
 	// n_col + 1 is enough for u, v, x, y, x2, y2, s
     /* u, v, x, y, x2, y2, sc, H, Hmax, rmax INDEXING (by t):
@@ -418,7 +456,7 @@ void ksw_extd2_cpp(
     sc = (int8_t *)kmalloc(km, n_col + 1);
 
     H = (int32_t*)kmalloc(km, (n_col+1) * sizeof(int32_t));
-    for (int t = 0; t <= n_col; ++t) H[t] = -q - e;
+    for (int t = 0; t <= n_col; ++t) H[t] = KSW_NEG_INF;
     Hmax = (int32_t *)kmalloc(km, (n_col + 1) * sizeof(int32_t));
     for (int t = 0; t <= n_col; ++t) Hmax[t] = KSW_NEG_INF; // Hmax[i] = -inf
     rmax = (int *)kmalloc(km, (n_col + 1) * sizeof(int));
@@ -434,12 +472,12 @@ void ksw_extd2_cpp(
 		off_end = off + qlen + tlen - 1;
 	}
 
-    //if (!with_cigar)
-    //    fprintf(align_score_file, "non score\n");
-    //else if (flag & KSW_EZ_RIGHT)
-    //    fprintf(align_score_file, "right aligned\n");
-    //else
-    //    fprintf(align_score_file, "left aligned\n");
+    if (!with_cigar)
+        fprintf(align_debug_file, "non score\n");
+    else if (flag & KSW_EZ_RIGHT)
+        fprintf(align_debug_file, "right aligned\n");
+    else
+        fprintf(align_debug_file, "left aligned\n");
 
     int t_st, t_en;
     for (int r = 0; r < qlen + tlen - 1; ++r) {   // r: iterate through anti-diag
@@ -459,14 +497,10 @@ void ksw_extd2_cpp(
 
         t_st = get_t(st, r, n_col);
         t_en = get_t(en, r, n_col);
+
         int t_i_1 = -1 + ((r + n_col - 1) & 0x1);
 
         // DEBUG:
-        //if (!align_score_file) {
-        //    align_score_file = fopen("debug/test_sample_score.output", "w+");
-        //}
-        //fprintf(align_score_file, "n_col %d r %d w %d st %d en %d t_st %d t_i_1 %d t_en %d\n", n_col, r, w, st, en, t_st, t_i_1 + t_st, 
-        //       t_en);
         assert(en - st + 1 <= n_col);
         assert(t_en <= n_col + 1);
 
@@ -525,47 +559,74 @@ void ksw_extd2_cpp(
             ez->mte = H[t_en], ez->mte_q = r - en;
         }
         if (r - st == qlen - 1 && H[t_st] > ez->mqe){
-            ez->mqe = H[t_st], ez->mte_q = st;
+            ez->mqe = H[t_st], ez->mqe_t = st;
         }
 
         // DEBUG: debug output
-        //for (int t = t_st; t <= t_en; ++t) {
-        //    if (!align_score_file) {
-        //        align_score_file = fopen("debug/test_sample_score.output", "w+");
-        //    }
-        //    fprintf(align_score_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
-        //            r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
-        //            ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
-        //            ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
-        //            ((int *)rmax)[t], p[r*n_col - t_st + t]);  // for debugging
-        //}
-        //if (!align_score_file) {
-        //    align_score_file = fopen("debug/test_sample_score.output", "w+");
-        //}
-        //fprintf(align_score_file, "\n");
+        for (int t = t_st; t <= t_en; ++t) {
+            if (!align_debug_file) {
+                align_debug_file = fopen("debug/test_sample_debug.output", "w+");
+            }
+            #ifdef PRINT
+            fprintf(align_debug_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
+                    r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
+                    ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
+                    ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
+                    ((int *)rmax)[t], p[r*n_col - t_st + t]);  // for debugging
+            #endif
+            if (!align_score_file) {
+                align_score_file = fopen("debug/test_sample_score.output", "w+");
+                fprintf(align_score_file, "(r, t | u, v, x, y)\n");
+            }
+            #ifdef PRINT
+            fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", 
+                r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], 
+                ((int8_t*)y)[t]); // for debugging
+            #endif
+        }
+        #ifdef PRINT
+        fprintf(align_score_file, "\n");
+        #endif
+        if (!align_debug_file) {
+            align_debug_file = fopen("debug/test_sample_debug.output", "w+");
+        }
+        #ifdef PRINT
+        fprintf(align_debug_file, "\n");
+        #endif
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
 
     // NOTE: find max for ez
     for (int t = 1; t <= n_col; ++t){
         if (Hmax[t] > (int32_t)ez->max){
             ez->max = Hmax[t];
-            ez->max_t = get_i(t, rmax[t], n_col);
-            ez->max_q = rmax[t] - ez->max_t;
+            ez->max_t = get_i(t, rmax[t], n_col);   // max_t
+            ez->max_q = rmax[t] - ez->max_t;        // r - max_t
         }
     }
 
     ez->score = H[t_en];
 
-    //fprintf(
-    //    align_score_file,
-    //    "ez: max %d zdropped %d max_q %d max_t %d mte %d mte_q %d score %d\n",
-    //    ez->max, ez->zdropped, ez->max_q, ez->max_t, ez->mte, ez->mte_q,
-    //    ez->score);
-    //for (int i = 0; i < qlen + tlen - 1; i++) {
-    //    for (int j = 0; j < n_col; j++)
-    //        fprintf(align_score_file, "%d ", p[i * n_col + j]);
-    //    fprintf(align_score_file, "\n");
-    //}
+    #ifdef PRINT
+
+    fprintf(
+        align_debug_file,
+        "ez: max %d zdropped %d max_q %d max_t %d mte %d mte_q %d score %d\n",
+        ez->max, ez->zdropped, ez->max_q, ez->max_t, ez->mte, ez->mte_q,
+        ez->score);
+    for (int i = 0; i < qlen + tlen - 1; i++) {
+        for (int j = 0; j < real_n_col; j++)
+            fprintf(align_debug_file, "%d ", p[i * n_col + j]);
+        fprintf(align_debug_file, "\n");
+    }
+
+    for (int i = 0; i < qlen + tlen - 1; i++) {
+        fprintf(align_debug_file, "%d ", off[i]);
+    }fprintf(align_debug_file, "\n");
+    for (int i = 0; i < qlen + tlen - 1; i++) {
+        fprintf(align_debug_file, "%d ", off_end[i]);
+    }fprintf(align_debug_file, "\n");
+
+    #endif
 
     kfree(km, u);
     kfree(km, v);
