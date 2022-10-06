@@ -371,10 +371,10 @@ void ksw_extd2_cpp(
     ksw_extz_t *ez  // score and cigar
 ) {
     // debug
+    #ifdef PRINT
 	if (!align_debug_file) {
 		align_debug_file = fopen("debug/test_sample_debug.output", "w+");
 	}
-    #ifdef PRINT
     fprintf(align_debug_file, "q %d e %d q2 %d e2 %d\n", q, e, q2, e2);
     fprintf(align_debug_file,
             "(r, t, i | u, v, x, y, x2, y2, H, Hmax, rmax, p)\n");
@@ -472,12 +472,14 @@ void ksw_extd2_cpp(
 		off_end = off + qlen + tlen - 1;
 	}
 
+#ifdef PRINT
     if (!with_cigar)
         fprintf(align_debug_file, "non score\n");
     else if (flag & KSW_EZ_RIGHT)
         fprintf(align_debug_file, "right aligned\n");
     else
         fprintf(align_debug_file, "left aligned\n");
+#endif
 
     int t_st, t_en;
     for (int r = 0; r < qlen + tlen - 1; ++r) {   // r: iterate through anti-diag
@@ -563,34 +565,28 @@ void ksw_extd2_cpp(
         }
 
         // DEBUG: debug output
+        #ifdef PRINT
         for (int t = t_st; t <= t_en; ++t) {
             if (!align_debug_file) {
                 align_debug_file = fopen("debug/test_sample_debug.output", "w+");
             }
-            #ifdef PRINT
             fprintf(align_debug_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
                     r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
                     ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
                     ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
                     ((int *)rmax)[t], p[r*n_col - t_st + t]);  // for debugging
-            #endif
             if (!align_score_file) {
                 align_score_file = fopen("debug/test_sample_score.output", "w+");
                 fprintf(align_score_file, "(r, t | u, v, x, y)\n");
             }
-            #ifdef PRINT
             fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", 
                 r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], 
                 ((int8_t*)y)[t]); // for debugging
-            #endif
         }
-        #ifdef PRINT
         fprintf(align_score_file, "\n");
-        #endif
         if (!align_debug_file) {
             align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         }
-        #ifdef PRINT
         fprintf(align_debug_file, "\n");
         #endif
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
@@ -639,6 +635,7 @@ void ksw_extd2_cpp(
     kfree(km, Hmax);
     kfree(km, rmax);
     if (with_cigar) { // backtrack
+                      //
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
