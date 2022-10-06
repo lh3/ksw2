@@ -1,6 +1,7 @@
 CC=			gcc
 CXX=		g++
 CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
+CXXFLAGS=	-g -Wall -Wextra
 CPPFLAGS=	#-DHAVE_KALLOC
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
@@ -8,6 +9,12 @@ OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
 			ksw2_extd2.o ksw2_extd2_cpp.o
 PROG=		ksw2-test
 LIBS=		-lz
+coverage = n
+
+ifeq ($(coverage),y)
+	CFLAGS += -fprofile-arcs -ftest-coverage
+	CXXFLAGS += -fprofile-arcs -ftest-coverage
+endif
 
 ifneq ($(gaba),) # gaba source code directory
 	CPPFLAGS += -DHAVE_GABA
@@ -38,13 +45,19 @@ endif
 all:$(PROG)
 
 .cpp_cpp.o:
-		$(CXX) -c $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 ksw2-test:cli.o kalloc.o $(OBJS)
 		$(CC) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
+
+report:
+	mkdir -p coverage
+	lcov --capture --directory . --output-file coverage.info
+	genhtml coverage.info --output-directory coverage
 		
 clean:
 		rm -fr gmon.out *.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM session*
+		rm -rf *.gcda *.gcno
 
 depend:
 		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CFLAGS) $(DFLAGS) -- *.c)

@@ -180,13 +180,14 @@ int main(int argc, char *argv[])
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:Ka")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:rscgz:A:B:O:E:Ka")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'z') zdrop = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
+		else if (c == 'c') flag |= KSW_EZ_GENERIC_SC;
 		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
 		else if (c == 'K') no_kalloc = 1;
 		else if (c == 'A') a = atoi(optarg);
