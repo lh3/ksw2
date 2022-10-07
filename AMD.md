@@ -33,3 +33,38 @@ By omitting, `KSW2ID`, the script will automatically create a output directory f
 ```bash
 ./compare_test_suite.sh myrun reference
 ```
+
+## Code coverage
+To produce a code coverage report for `ksw2_test`, first compile with coverage enabled:
+```
+make coverage=y
+```
+Run the executable one or more times
+```
+./ksw2_test .. 
+```
+Each time executable runs, code coverage data will be collected. To compile this data into a html
+report, use:
+```
+make report
+```
+This report is written to the directory `coverage`.
+
+## Code coverage script 
+The script `coverage.sh` is designed to run `ksw2_test` multiple times to take all branches inside a
+kernel. This
+script can be used in conjunction with the `run_test_suite` script as follows:
+```
+ KSW2ID=extd2_cpp KSW2=./coverage.sh ./run_test_suite.sh test_suite -t extd2_cpp # test
+ KSW2ID=extd2_sse KSW2=./coverage.sh ./run_test_suite.sh test_suite -t extd2_sse # reference
+ ```
+ Set `KSW2COV` if the main executable is not `./ksw2-test`.
+ Use the comparison script as before,
+ ```
+ ./compare_test_suite.sh extd2_cpp extd2_sse
+ ```
+ To design your own code coverage tests, put one or more calls to `ksw2-test` in a script. See
+ `coverage.sh` for an example.
+
+
+
