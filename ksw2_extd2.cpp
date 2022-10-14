@@ -28,6 +28,7 @@
 #endif
 
 #ifdef DEBUG
+#include <iostream>
 FILE *align_score_file = NULL;
 FILE *align_debug_file = NULL;
 #endif
@@ -461,7 +462,11 @@ void ksw_extd2_cpp(
     for (int t = 0; t <= n_col; ++t) rmax[t] = -1;
 
     if (with_cigar) {
-        p = (uint8_t *)kmalloc(km, ((size_t)(qlen + tlen - 1) * n_col + 1));  // qlen + tlen - 1 = number of diagonal
+        size_t p_size = ((size_t)qlen + tlen - 1) * (size_t)n_col + 1;
+        p = (uint8_t *)kmalloc(km,
+                               (((size_t)qlen + tlen - 1) * (size_t)n_col +
+                                1));  // qlen + tlen - 1 = number of diagonal
+        assert(p != NULL);
         // In the backtrack matrix, value p[] has the following structure:
 		//   bit 0-2: which type gets the max - 0 for H, 1 for E, 2 for F, 3 for \tilde{E} and 4 for \tilde{F}
 		//   bit 3/0x08: 1 if a continuation on the E state (bit 5/0x20 for a continuation on \tilde{E})
@@ -531,9 +536,13 @@ void ksw_extd2_cpp(
 				// Preprocess the score, matrix is like a lookup table.
             }
 		}
-
-        off[r] = st;
-        off_end[r] = en;
+        
+        if (with_cigar){
+            off[r] = st;
+            off_end[r] = en;
+        }
+        // DEBUG: check p access
+        assert((size_t)r * n_col + t_en - t_st< ((size_t)qlen + tlen - 1) * n_col + 1);
 
         /* NOTE: update ksw matrix & H, p */
         if (!with_cigar) {  // score only

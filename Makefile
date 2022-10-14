@@ -1,7 +1,7 @@
 CC=			gcc
 CXX=		g++
 CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
-CPPFLAGS=	#-DHAVE_KALLOC
+CPPFLAGS=	-g -Wall -Wextra -O2 #-DHAVE_KALLOC 
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
 			ksw2_extd.o ksw2_extd2_sse.o ksw2_extf2_sse.o ksw2_exts2_sse.o \
@@ -30,8 +30,6 @@ ifneq ($(avx2),)
 	CFLAGS += -mavx2
 endif
 
-debug: CPPFLAGS += -DDEBUG -g
-debug: all
 
 .SUFFIXES:.c .o _cpp.o .cpp
 
@@ -40,11 +38,14 @@ debug: all
 
 all:$(PROG)
 
+debug: CPPFLAGS += -DDEBUG
+debug: $(PROG)
+
 .cpp_cpp.o:
-		$(CXX) -c $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 ksw2-test:cli.o kalloc.o $(OBJS)
-		$(CC) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
+		$(CXX) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
 		
 clean:
 		rm -fr gmon.out *.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM session*
