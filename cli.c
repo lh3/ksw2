@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 	if (argc - optind < 2) {
 		fprintf(stderr, "Usage: ksw2-test [options] <DNA-target> <DNA-query>\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -t STR        algorithm: gg, gg2, gg2_sse, extz, extz2_sse, extd, extd2_sse [%s]\n", algo);
+		fprintf(stderr, "  -t STR        algorithm: gg, gg2, gg2_sse, extz, extz2_sse, extd, extd2_sse, extd2, extd2_cpp [%s]\n", algo);
 		fprintf(stderr, "  -R INT        repeat INT times (for benchmarking) [1]\n");
 		fprintf(stderr, "  -w INT        band width [inf]\n");
 		fprintf(stderr, "  -z INT        Z-drop [%d]\n", zdrop);

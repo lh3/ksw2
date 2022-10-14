@@ -85,6 +85,12 @@ void ksw_extd2_cpp(void *km, int qlen, const uint8_t *query, int tlen,
                    int8_t e, int8_t q2, int8_t e2, int w, int zdrop,
                    int end_bonus, int flag, ksw_extz_t *ez);
 
+#ifdef DEBUG
+#include <stdio.h>
+extern FILE *align_score_file;
+extern FILE *align_debug_file;
+#endif
+
 /**
  * Global alignment
  *

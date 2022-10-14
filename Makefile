@@ -30,6 +30,9 @@ ifneq ($(avx2),)
 	CFLAGS += -mavx2
 endif
 
+debug: CPPFLAGS += -DDEBUG -g
+debug: all
+
 .SUFFIXES:.c .o _cpp.o .cpp
 
 .c.o:

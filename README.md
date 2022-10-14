@@ -22,6 +22,10 @@ KSW2 implements the Suzuki-Kasahara algorithm and is a component of
 > * Suzuki, H. and Kasahara, M. (2018). Introducing difference recurrence relations for faster semi-global alignment of long sequences. *BMC Bioinformatics*, **19**:45.
 > * Li, H (2018) Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*, **34**:3094-3100.
 
+## Build
+`make`: build without debug output
+`make debug`: build with debug output to  `debug/test_sample_debug.output` & `debug/test_sample_score.output` for `extd2_cpp`
+
 ## Usage
 
 Each `ksw2_*.c` file implements a single function and is independent of each
@@ -34,6 +38,12 @@ other. Here are brief descriptions about what each file implements:
 * [ksw2_extz2_sse.c](ksw2_extz2_sse.c): global and extension with SSE intrinsics; Suzuki's
 * [ksw2_extd.c](ksw2_extd.c): global and extension alignment, dual gap cost; Green's formulation
 * [ksw2_extd2_sse.c](ksw2_extd2_sse.c): global and extension, dual gap cost, with SSE intrinsics; Suzuki's
+
+### New Implementations
+* [ksw2_extd2.c](ksw2_extd2.c): gloabl and extension, dual gap cost, without SSE intrinsics; Suzuki's
+* [ksw2_extd2.cpp](ksw2_extd2.cpp): global and extension, dual gap cost, without SSE intrinsics, optimized with warp shuffling in mind; Suzuki's: KSW_EZ_APPROX_DROP & KSW_EZ_APPROX_MAX flags are not supported. 
+
+
 
 Users are encouraged to copy the header file `ksw2.h` and relevant
 `ksw2_*.c` file to their own source code trees. On x86 CPUs with SSE2
