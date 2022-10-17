@@ -51,7 +51,7 @@ static void ksw_gen_simple_mat(int m, int8_t *mat, int8_t a, int8_t b)
 }
 
 static void global_aln(const char *algo, void *km, const char *qseq_, const char *tseq_, int8_t m, const int8_t *mat, int8_t q, int8_t e, int8_t q2, int8_t e2,
-					   int w, int zdrop, int flag, ksw_extz_t *ez)
+					   int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 {
 	int i, qlen, tlen;
 	uint8_t *qseq, *tseq;
@@ -77,15 +77,15 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 	else if (strcmp(algo, "extz") == 0)        ksw_extz(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, flag, ez);
 	else if (strcmp(algo, "extz2_sse") == 0)   ksw_extz2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, w, zdrop, 0, flag, ez);
 	else if (strcmp(algo, "extd") == 0)        ksw_extd(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, flag, ez);
-	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, 0, flag, ez);
+	else if (strcmp(algo, "extd2_sse") == 0)   ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, end_bonus, flag, ez);
 	// NOTE: add our c version of alignment
     else if (strcmp(algo, "extd2") == 0)
         ksw_extd2_c(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, m, mat, q,
-                    e, q2, e2, w, zdrop, 0, flag, ez);
+                    e, q2, e2, w, zdrop, end_bonus, flag, ez);
 	// NOTE: add out updated c version of alignment
 	else if (strcmp(algo, "extd2_cpp") == 0)
         ksw_extd2_cpp(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, m, mat,
-                      q, e, q2, e2, w, zdrop, 0, flag, ez);
+                      q, e, q2, e2, w, zdrop, end_bonus, flag, ez);
     else if (strcmp(algo, "extf2_sse") == 0)
         ksw_extf2_sse(km, qlen, (uint8_t *)qseq, tlen, (uint8_t *)tseq, mat[0],
                       mat[1], e, w, zdrop, ez);
@@ -95,7 +95,7 @@ static void global_aln(const char *algo, void *km, const char *qseq_, const char
 		ksw_exts2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 2, 1, 32, 4, zdrop, 0, flag|KSW_EZ_SPLICE_FOR, 0, ez);
 	}
 	else if (strcmp(algo, "test") == 0) ksw_extd2_sse(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, 4, 2, 24, 1, 751, 400, 0, 8, ez);
-	else if (strcmp(algo, "extd2") == 0) ksw_extd2_c(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, 0, flag, ez);
+	else if (strcmp(algo, "extd2") == 0) ksw_extd2_c(km, qlen, (uint8_t*)qseq, tlen, (uint8_t*)tseq, m, mat, q, e, q2, e2, w, zdrop, end_bonus, flag, ez);
 #ifdef HAVE_GABA
 	else if (strcmp(algo, "gaba") == 0) { // libgaba. Note that gaba may not align to the end
 		int buf_len = 0x10000;
@@ -175,18 +175,23 @@ int main(int argc, char *argv[])
 	void *km = 0;
 	int8_t a = 2, b = 4, q = 4, e = 2, q2 = 13, e2 = 1;
 	int c, i, pair = 1, w = -1, flag = 0, rep = 1, zdrop = -1, no_kalloc = 0;
+    int end_bonus = 0;
 	char *algo = "extd", *s;
 	int8_t mat[25];
 	ksw_extz_t ez;
 	gzFile fp[2];
 
-	while ((c = getopt(argc, argv, "t:w:R:rsgz:A:B:O:E:Ka")) >= 0) {
+	while ((c = getopt(argc, argv, "t:w:R:e:rscxvgz:A:B:O:E:Ka")) >= 0) {
 		if (c == 't') algo = optarg;
 		else if (c == 'w') w = atoi(optarg);
 		else if (c == 'R') rep = atoi(optarg);
 		else if (c == 'z') zdrop = atoi(optarg);
+		else if (c == 'e') end_bonus = atoi(optarg);
 		else if (c == 'r') flag |= KSW_EZ_RIGHT;
 		else if (c == 's') flag |= KSW_EZ_SCORE_ONLY;
+		else if (c == 'c') flag |= KSW_EZ_GENERIC_SC;
+		else if (c == 'x') flag |= KSW_EZ_EXTZ_ONLY;
+		else if (c == 'v') flag |= KSW_EZ_REV_CIGAR;
 		else if (c == 'g') flag |= KSW_EZ_APPROX_MAX | KSW_EZ_APPROX_DROP;
 		else if (c == 'K') no_kalloc = 1;
 		else if (c == 'A') a = atoi(optarg);
@@ -225,7 +230,7 @@ int main(int argc, char *argv[])
 	fp[1] = gzopen(argv[optind+1], "r");
 
 	if (fp[0] == 0 && fp[1] == 0) {
-		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
+		global_aln(algo, km, argv[optind+1], argv[optind], 5, mat, q, e, q2, e2, w, zdrop, end_bonus, flag, &ez);
 		print_aln("first", "second", &ez);
 	} else if (fp[0] && fp[1]) {
 		kseq_t *ks[2];
@@ -235,7 +240,7 @@ int main(int argc, char *argv[])
 			while (kseq_read(ks[0]) > 0) {
 				if (kseq_read(ks[1]) <= 0) break;
 				for (i = 0; i < rep; ++i)
-					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
+					global_aln(algo, km, ks[1]->seq.s, ks[0]->seq.s, 5, mat, q, e, q2, e2, w, zdrop, end_bonus, flag, &ez);
 				print_aln(ks[0]->name.s, ks[1]->name.s, &ez);
 			}
 		} else {
@@ -250,7 +255,7 @@ int main(int argc, char *argv[])
 			}
 			while (kseq_read(ks[1]) > 0) {
 				for (i = 0; i < n_seq; ++i) {
-					global_aln(algo, km, ks[1]->seq.s, seq[i].seq, 5, mat, q, e, q2, e2, w, zdrop, flag, &ez);
+					global_aln(algo, km, ks[1]->seq.s, seq[i].seq, 5, mat, q, e, q2, e2, w, zdrop, end_bonus, flag, &ez);
 					print_aln(seq[i].name, ks[1]->name.s, &ez);
 				}
 			}

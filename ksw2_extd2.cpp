@@ -45,9 +45,9 @@ __inline__ int ksw_check_par(const int8_t m, const int8_t *mat, const int8_t q,
     return 0;
 }
 
-__inline__ int get_t(int i, int r, int n_col) { 
+__inline__ int get_t(int i, int r, int n_col) {
     int offset = (n_col-1-r) & 1 ? (n_col-r-2)/2:(n_col-r-1)/2;
-    return i + offset + 1; 
+    return i + offset + 1;
 }
 
 __inline__ int get_i(int t, int r, int n_col) {
@@ -164,9 +164,9 @@ __inline__ int8_t ksw_cal_z_right_aligned(int8_t *z_ptr, int8_t sc, int8_t u,
 }
 
 /* 	calculate x_ij, y_ij, x2_ij, y2_ij
-	x_{i,j} = max{0, x_{i-1,j} + v_{i-1} - z_{ij} + q} - q - e}  equ(5) 
+	x_{i,j} = max{0, x_{i-1,j} + v_{i-1} - z_{ij} + q} - q - e}  equ(5)
 */
-__inline__ void ksw_cal_xy(int8_t *dst, int8_t x, const int8_t v, int8_t z,
+void ksw_cal_xy(int8_t *dst, int8_t x, const int8_t v, int8_t z,
                              const int8_t q, const int8_t e){
     x = x + v - z + q;
 	if (x <= 0){
@@ -179,9 +179,9 @@ __inline__ void ksw_cal_xy(int8_t *dst, int8_t x, const int8_t v, int8_t z,
     x_{i,j} = max{0, x_{i-1,j} + v_{i-1} - z_{ij} + q} - q - e}  equ(5)
     return 1 if a continuation on the E/F state (left aligned)
 */
-__inline__ int8_t ksw_cal_xy_left_aligned(int8_t *dst, int8_t x, const int8_t v, int8_t z,
+int8_t ksw_cal_xy_left_aligned(int8_t *dst, int8_t x, const int8_t v, int8_t z,
                            const int8_t q, const int8_t e) {
-	
+
     x = x + v - z + q;
     int d = 1;
     if (x <= 0) {
@@ -196,7 +196,7 @@ __inline__ int8_t ksw_cal_xy_left_aligned(int8_t *dst, int8_t x, const int8_t v,
     x_{i,j} = max{0, x_{i-1,j} + v_{i-1} - z_{ij} + q} - q - e}  equ(5)
     return 1 if a continuation on the E/F state (right aligned)
 */
-__inline__ int8_t ksw_cal_xy_right_aligned(int8_t *dst, int8_t x, const int8_t v,
+int8_t ksw_cal_xy_right_aligned(int8_t *dst, int8_t x, const int8_t v,
                                         int8_t z, const int8_t q,
                                         const int8_t e) {
     x = x + v - z + q;
@@ -224,8 +224,8 @@ __inline__ int8_t ksw_cal_score( uint8_t target, uint8_t query, int8_t m, int8_t
 
 
 template <int SCORE_ONLY, int LEFT_ALIGNED=0>
-__inline__ int ksw_update_diag	(
-	int8_t *sc, int8_t *u, int8_t *v, int8_t *x, int8_t *y, int8_t *x2, int8_t *y2, 
+int ksw_update_diag	(
+	int8_t *sc, int8_t *u, int8_t *v, int8_t *x, int8_t *y, int8_t *x2, int8_t *y2,
     uint8_t *p, int32_t *H,  // indexed by t
     int32_t *Hmax, int* rmax, // find max H
 	const int r, const int t_st, const int t_en, int t_i_1, const int n_col, // start and end index in terms of t
@@ -285,7 +285,7 @@ __inline__ int ksw_update_diag	(
         int8_t d, z;
         if (SCORE_ONLY){ // score only
             ksw_cal_z(&z, sc_elt, prev_u, prev_v, prev_x, prev_y, prev_x2, prev_y2, mm0);
-        } else if (LEFT_ALIGNED){ // left aligned 
+        } else if (LEFT_ALIGNED){ // left aligned
             d = ksw_cal_z_left_aligned(&z, sc_elt, prev_u, prev_v, prev_x, prev_y,
                                        prev_x2, prev_y2, mm0);
         } else { // right aligned
@@ -370,6 +370,7 @@ void ksw_extd2_cpp(
     /* Output */
     ksw_extz_t *ez  // score and cigar
 ) {
+    // debug
 #ifdef DEBUG
     if (!align_debug_file) {
 		align_debug_file = fopen("debug/test_sample_debug.output", "w+");
@@ -393,7 +394,7 @@ void ksw_extd2_cpp(
 
     /* options */
     int with_cigar = !(flag & KSW_EZ_SCORE_ONLY);
-    assert( !(flag & KSW_EZ_APPROX_MAX) ); // GPU doesn't support max_approx  
+    assert( !(flag & KSW_EZ_APPROX_MAX) ); // GPU doesn't support max_approx
 
     /* Score Generation output for backtracking */
     int *off = 0,
@@ -403,7 +404,7 @@ void ksw_extd2_cpp(
     ksw_reset_extz(ez);
 	if (m <= 1 || qlen <= 0 || tlen <= 0) return;
 
-    int tmp; 
+    int tmp;
     if (q2 + e2 < q + e) tmp = q, q = q2, q2 = tmp, tmp = e, e = e2, e2 = tmp; // make sure q+e no larger than q2+e2
 
     if (ksw_check_par(m, mat, q, e)) return;
@@ -436,8 +437,8 @@ void ksw_extd2_cpp(
     /* u, v, x, y, x2, y2, sc, H, Hmax, rmax INDEXING (by t):
         t = 0: Reserved for initialization value. Always outside of the band!
         t = 1 - w-1/w: within band.
-        t = w: maybe within band or initialization value. 
-        
+        t = w: maybe within band or initialization value.
+
         Details about t to i tranlation: see get_i & get_t
     */
     u = (int8_t *)kmalloc(km, n_col + 1);
@@ -494,11 +495,13 @@ void ksw_extd2_cpp(
 		if (st < (r-w+1)>>1) st = (r-w+1)>>1; // take the ceil, choose the band position
 		if (en > (r+w)>>1) en = (r+w)>>1; // take the floor, choose the band position
 		//DEBUG: change to assert
+        #ifdef DEBUG
 		if (st > en) {
 			ez->zdropped = 1;
 			printf("break due to st > en \n"); // debug
 			break;
 		}
+        #endif
 
         t_st = get_t(st, r, n_col);
         t_en = get_t(en, r, n_col);
@@ -517,7 +520,7 @@ void ksw_extd2_cpp(
                                             : -e2;
 
 		/* NOTE: Preprocess score */
-		// match/mismatch only 
+		// match/mismatch only
 		if (!(flag & KSW_EZ_GENERIC_SC)) {
 			for (int i = st, t = t_st; i <= en; t++, i++) {
 				int8_t query_elt, target_elt, score;
@@ -546,24 +549,24 @@ void ksw_extd2_cpp(
 
         /* NOTE: update ksw matrix & H, p */
         if (!with_cigar) {  // score only
-            ksw_update_diag<1>(sc, u, v, x, y, x2, y2, 
+            ksw_update_diag<1>(sc, u, v, x, y, x2, y2,
                         p + r * n_col - t_st, H,
                         Hmax, rmax,
-						r, t_st, t_en, t_i_1, n_col,
-						q, e, q2, e2, mat[0], neta);
+	    				r, t_st, t_en, t_i_1, n_col,
+	    				q, e, q2, e2, mat[0], neta);
         } else if (!(flag & KSW_EZ_RIGHT)) {  // gap left_aligned
-            ksw_update_diag<0, 1>(sc, u, v, x, y, x2, y2, 
+            ksw_update_diag<0, 1>(sc, u, v, x, y, x2, y2,
                         p + r * n_col - t_st, H,
                         Hmax, rmax,
-						r, t_st, t_en, t_i_1, n_col,
-						q, e, q2, e2, mat[0], neta);
+	    				r, t_st, t_en, t_i_1, n_col,
+	    				q, e, q2, e2, mat[0], neta);
         } else {  // right algined
-            ksw_update_diag<0, 0>(sc, u, v, x, y, x2, y2, 
+            ksw_update_diag<0, 0>(sc, u, v, x, y, x2, y2,
                         p + r * n_col - t_st, H,
                         Hmax, rmax,
-						r, t_st, t_en, t_i_1, n_col,
-						q, e, q2, e2, mat[0], neta);
-		}
+	    				r, t_st, t_en, t_i_1, n_col,
+	    				q, e, q2, e2, mat[0], neta);
+	    }
 
         /* NOTE: update mte & mqe */
         if (en == tlen - 1 && H[t_en] > ez->mte){
@@ -644,6 +647,7 @@ void ksw_extd2_cpp(
     kfree(km, Hmax);
     kfree(km, rmax);
     if (with_cigar) { // backtrack
+                      //
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
 		ksw_backtrack(km, 1, rev_cigar, 0, (uint8_t*)p, off, off_end, n_col, tlen-1, qlen-1, &ez->m_cigar, &ez->n_cigar, &ez->cigar);
