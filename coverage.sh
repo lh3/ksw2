@@ -25,8 +25,8 @@ $KSW2COV $u $t -x ${@:2}
 # Sets end_bonus and zdrop
 $KSW2COV $u $t ${@:2} -x -e 1 -z 1
 
-# FIXME: Performs score calculation only (currently segmentation faults)
-# $KSW2COV $u $t -s ${@:2}
+# Sets "score only" mode
+$KSW2COV $u $t -s ${@:2}
 
 # Modify the gap penalty to trigger long thres
 $KSW2COV -t extd2_cpp $u $t -x -E 2

@@ -2,7 +2,7 @@ CC=			gcc
 CXX=		g++
 CFLAGS=		-g -Wall -Wextra -Wc++-compat -O2
 CXXFLAGS=	-g -Wall -Wextra
-CPPFLAGS=	#-DHAVE_KALLOC
+CPPFLAGS=	-g -Wall -Wextra -O2 #-DHAVE_KALLOC 
 INCLUDES=	-I.
 OBJS=		ksw2_gg.o ksw2_gg2.o ksw2_gg2_sse.o ksw2_extz.o ksw2_extz2_sse.o \
 			ksw2_extd.o ksw2_extd2_sse.o ksw2_extf2_sse.o ksw2_exts2_sse.o \
@@ -14,6 +14,8 @@ coverage = n
 ifeq ($(coverage),y)
 	CFLAGS += -fprofile-arcs -ftest-coverage
 	CXXFLAGS += -fprofile-arcs -ftest-coverage
+else
+	CXXFLAGS += -O2
 endif
 
 ifneq ($(gaba),) # gaba source code directory
@@ -37,6 +39,7 @@ ifneq ($(avx2),)
 	CFLAGS += -mavx2
 endif
 
+
 .SUFFIXES:.c .o _cpp.o .cpp
 
 .c.o:
@@ -44,16 +47,22 @@ endif
 
 all:$(PROG)
 
+debug: CPPFLAGS += -DDEBUG
+debug: $(PROG)
+
 .cpp_cpp.o:
 		$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
-ksw2-test:cli.o kalloc.o $(OBJS)
-		$(CC) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
+#ksw2-test:cli.o kalloc.o $(OBJS)
+#		$(CC) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
 
 report:
 	mkdir -p coverage
 	lcov --capture --directory . --output-file coverage.info
 	genhtml coverage.info --output-directory coverage
+
+ksw2-test:cli.o kalloc.o $(OBJS)
+		$(CXX) $(CFLAGS) $^ -o $@ $(LIBS_MORE) $(LIBS)
 		
 clean:
 		rm -fr gmon.out *.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM session*

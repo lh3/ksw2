@@ -8,9 +8,6 @@
 #include "ksw2.h"
 
 
-// #define PRINT
-
-
 #ifdef __SSE2__
 #ifdef USE_SIMDE
 #include <simde/x86/sse2.h>
@@ -30,8 +27,11 @@
 #endif
 #endif
 
-extern FILE *align_score_file;
-FILE *align_debug_file;
+#ifdef DEBUG
+#include <iostream>
+FILE *align_score_file = NULL;
+FILE *align_debug_file = NULL;
+#endif
 
 /* return non-zero if we won't see any mismatches */
 __inline__ int ksw_check_par(const int8_t m, const int8_t *mat, const int8_t q,
@@ -253,7 +253,7 @@ int ksw_update_diag	(
             x2[t-1] = x2_new;
             y2[t-1] = y2_new;
             H[t-1] = H_new;
-            #ifdef PRINT
+            #ifdef DEBUG
             if (t >= t_st && t <= t_en+1)
                 fprintf(align_debug_file,
                         "t %d, s %d, u %d, v %d, x %d,  y %d, x2 %d, y2 %d H %d\n", t - 1, sc[t-1],
@@ -275,7 +275,7 @@ int ksw_update_diag	(
             continue;
         }
 
-        #ifdef PRINT
+        #ifdef DEBUG
         fprintf(align_debug_file,
                 "t %d sc %d t_i_1 %d prev_u %d, prev_v %d, prev_x %d, prev_y %d, prev_x2 %d, "
                 "prev_y2 %d prev_H %d\n",
@@ -292,7 +292,7 @@ int ksw_update_diag	(
             d = ksw_cal_z_right_aligned(&z, sc_elt, prev_u, prev_v, prev_x, prev_y,
                                         prev_x2, prev_y2, mm0);
         }
-        #ifdef PRINT
+        #ifdef DEBUG
         fprintf(align_debug_file, "t %d t_{i-1} %d z %d prev_v %d prev_u %d\n", t, t_i_1, z, prev_v, prev_u);
         #endif
         u_new = z - prev_v;
@@ -337,11 +337,11 @@ int ksw_update_diag	(
             Hmax[t] = H_new;
             rmax[t] = r;
         }
-        #ifdef PRINT
+        #ifdef DEBUG
         fprintf(align_debug_file, "%d|%d ", prev_H, H_new);
         #endif
     }
-    #ifdef PRINT
+    #ifdef DEBUG
     fprintf(align_debug_file, "\n");
     #endif
     // update KZ matrix
@@ -371,14 +371,14 @@ void ksw_extd2_cpp(
     ksw_extz_t *ez  // score and cigar
 ) {
     // debug
-    #ifdef PRINT
-	if (!align_debug_file) {
+#ifdef DEBUG
+    if (!align_debug_file) {
 		align_debug_file = fopen("debug/test_sample_debug.output", "w+");
 	}
     fprintf(align_debug_file, "q %d e %d q2 %d e2 %d\n", q, e, q2, e2);
     fprintf(align_debug_file,
             "(r, t, i | u, v, x, y, x2, y2, H, Hmax, rmax, p)\n");
-    #endif
+#endif
 
     /* Score Generation parameters */
     int long_thres, long_diff; // derived from q, e.
@@ -463,7 +463,11 @@ void ksw_extd2_cpp(
     for (int t = 0; t <= n_col; ++t) rmax[t] = -1;
 
     if (with_cigar) {
-        p = (uint8_t *)kmalloc(km, ((size_t)(qlen + tlen - 1) * n_col + 1));  // qlen + tlen - 1 = number of diagonal
+        size_t p_size = ((size_t)qlen + tlen - 1) * (size_t)n_col + 1;
+        p = (uint8_t *)kmalloc(km,
+                               (((size_t)qlen + tlen - 1) * (size_t)n_col +
+                                1));  // qlen + tlen - 1 = number of diagonal
+        assert(p != NULL);
         // In the backtrack matrix, value p[] has the following structure:
 		//   bit 0-2: which type gets the max - 0 for H, 1 for E, 2 for F, 3 for \tilde{E} and 4 for \tilde{F}
 		//   bit 3/0x08: 1 if a continuation on the E state (bit 5/0x20 for a continuation on \tilde{E})
@@ -472,7 +476,7 @@ void ksw_extd2_cpp(
 		off_end = off + qlen + tlen - 1;
 	}
 
-#ifdef PRINT
+#ifdef DEBUG
     if (!with_cigar)
         fprintf(align_debug_file, "non score\n");
     else if (flag & KSW_EZ_RIGHT)
@@ -504,9 +508,11 @@ void ksw_extd2_cpp(
 
         int t_i_1 = -1 + ((r + n_col - 1) & 0x1);
 
+#ifdef DEBUG
         // DEBUG:
         assert(en - st + 1 <= n_col);
         assert(t_en <= n_col + 1);
+#endif
 
         /* NOTE: find boundary values for neta */
         int8_t neta = r + 1 < long_thres    ? -e
@@ -533,9 +539,13 @@ void ksw_extd2_cpp(
 				// Preprocess the score, matrix is like a lookup table.
             }
 		}
-
-        off[r] = st;
-        off_end[r] = en;
+        
+        if (with_cigar){
+            off[r] = st;
+            off_end[r] = en;
+        }
+        // DEBUG: check p access
+        assert((size_t)r * n_col + t_en - t_st< ((size_t)qlen + tlen - 1) * n_col + 1);
 
         /* NOTE: update ksw matrix & H, p */
         if (!with_cigar) {  // score only
@@ -567,7 +577,7 @@ void ksw_extd2_cpp(
         }
 
         // DEBUG: debug output
-        #ifdef PRINT
+#ifdef DEBUG
         for (int t = t_st; t <= t_en; ++t) {
             if (!align_debug_file) {
                 align_debug_file = fopen("debug/test_sample_debug.output", "w+");
@@ -581,8 +591,8 @@ void ksw_extd2_cpp(
                 align_score_file = fopen("debug/test_sample_score.output", "w+");
                 fprintf(align_score_file, "(r, t | u, v, x, y)\n");
             }
-            fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)",
-                r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t],
+            fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", 
+                r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], 
                 ((int8_t*)y)[t]); // for debugging
         }
         fprintf(align_score_file, "\n");
@@ -590,7 +600,7 @@ void ksw_extd2_cpp(
             align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         }
         fprintf(align_debug_file, "\n");
-        #endif
+#endif
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
 
     // NOTE: find max for ez
@@ -604,7 +614,7 @@ void ksw_extd2_cpp(
 
     ez->score = H[t_en];
 
-    #ifdef PRINT
+#ifdef DEBUG
 
     fprintf(
         align_debug_file,
@@ -624,7 +634,7 @@ void ksw_extd2_cpp(
         fprintf(align_debug_file, "%d ", off_end[i]);
     }fprintf(align_debug_file, "\n");
 
-    #endif
+#endif
 
     kfree(km, u);
     kfree(km, v);
