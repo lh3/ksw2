@@ -604,8 +604,10 @@ void ksw_extd2_cpp(
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
 
     // NOTE: find max for ez
+    int max_r = -1;
     for (int t = 1; t <= n_col; ++t){
-        if (Hmax[t] > (int32_t)ez->max){
+        if (Hmax[t] > (int32_t)ez->max || (Hmax[t] == (int32_t)ez->max && rmax[t] < max_r)) {
+            max_r = rmax[t];
             ez->max = Hmax[t];
             ez->max_t = get_i(t, rmax[t], n_col);   // max_t
             ez->max_q = rmax[t] - ez->max_t;        // r - max_t

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 pass=0
 total=0
