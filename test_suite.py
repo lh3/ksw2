@@ -90,6 +90,31 @@ def perturb_query(q, threshold):
 
     return dq
 
+def cut_query(q, max_cut):
+    """
+    Make deletions to a list of queries randomly. 
+    
+    Args:
+        q: List of queries
+        max_cut: [ max cuts to make, max length of each cut w.r.t. query length  ( 0 <= lmac < 1 )]
+
+    Returns:
+        cq: List of cut queries.
+    """
+    cq = []
+    for qi in q:
+        c_count = np.random.randint(max_cut[0])
+        for i in range(c_count):
+            cl = round(len(qi) * max_cut[1])
+            cl = np.random.randint(cl+1)
+            st = np.random.randint(len(qi) - cl)
+            en = st + cl
+            assert(en < len(qi))
+            
+            qi = np.concatenate((qi[:st], qi[en:]))
+        cq.append(qi)
+    return cq
+
 
 def write_ksw2file(filename, label, queries, verbose=False):
     """
@@ -116,7 +141,7 @@ def write_ksw2file(filename, label, queries, verbose=False):
         print("Wrote:", filename)
 
 
-def write_test_case(path, num_queries=10, min_len=1, max_len=100, thresholds=[0.1], verbose=False):
+def write_test_case(path, num_queries=10, min_len=1, max_len=100, thresholds=[0.1], max_cut=[2, 0.1], verbose=False):
     import os
     try:
         os.makedirs(path)
@@ -127,8 +152,11 @@ def write_test_case(path, num_queries=10, min_len=1, max_len=100, thresholds=[0.
         print(f"Generating test case {path} ...")
 
     for num, p in enumerate(thresholds):
-        q = gen_random_query(num_queries, min_len, max_len, verbose)
-        t = perturb_query(q, p)
+        for it in range(5):
+            q = gen_random_query(num_queries, min_len, max_len, verbose)
+            t = perturb_query(q, p)
+            q = cut_query(q, max_cut)
+            t = cut_query(t, max_cut)
 
-        write_ksw2file(f"{path}/q{num}.fa", "q", q, verbose)
-        write_ksw2file(f"{path}/t{num}.fa", "t", t, verbose)
+            write_ksw2file(f"{path}/q{num}_{it}.fa", "q", q, verbose)
+            write_ksw2file(f"{path}/t{num}_{it}.fa", "t", t, verbose)
