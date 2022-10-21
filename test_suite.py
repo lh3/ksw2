@@ -152,11 +152,10 @@ def write_test_case(path, num_queries=10, min_len=1, max_len=100, thresholds=[0.
         print(f"Generating test case {path} ...")
 
     for num, p in enumerate(thresholds):
-        for it in range(5):
-            q = gen_random_query(num_queries, min_len, max_len, verbose)
-            t = perturb_query(q, p)
-            q = cut_query(q, max_cut)
-            t = cut_query(t, max_cut)
+        q = gen_random_query(num_queries, min_len, max_len, verbose)
+        t = perturb_query(q, p)
+        q = cut_query(q, max_cut)
+        t = cut_query(t, max_cut)
 
-            write_ksw2file(f"{path}/q{num}_{it}.fa", "q", q, verbose)
-            write_ksw2file(f"{path}/t{num}_{it}.fa", "t", t, verbose)
+        write_ksw2file(f"{path}/q{num}.fa", "q", q, verbose)
+        write_ksw2file(f"{path}/t{num}.fa", "t", t, verbose)
