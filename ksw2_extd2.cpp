@@ -233,16 +233,19 @@ int ksw_update_diag	(
 ){
     int8_t u_new=neta, v_new=neta, x_new=-q-e, y_new=-q-e, x2_new=-q2-e2, y2_new=-q2-e2;
     int32_t H_new = -q-e;
-    for (int t = 0; t <= n_col + 1; ++t, ++t_i_1) {
+    for (int t = 0; t < n_col + 1; ++t, ++t_i_1) {
         // access previous matrix
-        int8_t sc_elt = sc[t];           // s_{i,j}
-        int8_t prev_u = u[t_i_1 + 1];    // u_{i,j+1}
-        int8_t prev_v = v[t_i_1];        // v_{i-1,j}
-        int8_t prev_x = x[t_i_1];        // x_{i-1,j}
-        int8_t prev_y = y[t_i_1 + 1];    // y_{i,j-1}
-        int8_t prev_x2 = x2[t_i_1];      // x2_{i-1,j}
-        int8_t prev_y2 = y2[t_i_1 + 1];  // y2_{i,j-1}
-        int32_t prev_H = (t == t_en && get_i(t, r, n_col) > 0) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
+        int8_t sc_elt, prev_u, prev_v, prev_x, prev_y, prev_x2, prev_y2, prev_H;
+        if (t >= t_st && t <= t_en){
+            sc_elt = sc[t];           // s_{i,j}
+            prev_u = u[t_i_1 + 1];    // u_{i,j+1}
+            prev_v = v[t_i_1];        // v_{i-1,j}
+            prev_x = x[t_i_1];        // x_{i-1,j}
+            prev_y = y[t_i_1 + 1];    // y_{i,j-1}
+            prev_x2 = x2[t_i_1];      // x2_{i-1,j}
+            prev_y2 = y2[t_i_1 + 1];  // y2_{i,j-1}
+            prev_H = (t == t_en && get_i(t, r, n_col) > 0) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
+        }
 
         // update KZ matrix
         if (t >= 1){
@@ -421,16 +424,16 @@ void ksw_extd2_cpp(
 
     /* memory size  */
     if (w < 0) w = tlen > qlen ? tlen : qlen;
-    n_col = qlen < tlen ? qlen : tlen;
+    // n_col = qlen < tlen ? qlen : tlen;
+    n_col = qlen;
     n_col = n_col < (w + 1) ? n_col : w + 1;
 
-    int full_query = 0;
-    int full_target = 0;
-    if (n_col == qlen) {
-        full_query = 1;
-        n_col = tlen;
-    }
-    int real_n_col = qlen < n_col ? qlen : n_col;
+    // int full_target = 0;
+    // if (n_col == qlen) {
+    //     full_query = 1;
+    //     n_col = tlen;
+    // }
+    // int real_n_col = qlen < n_col ? qlen : n_col;
 
     /* Allocate memory & initialize intermediate value */
 	// n_col + 1 is enough for u, v, x, y, x2, y2, s
@@ -505,8 +508,10 @@ void ksw_extd2_cpp(
 
         t_st = get_t(st, r, n_col);
         t_en = get_t(en, r, n_col);
+        assert(t_st > 0);
 
         int t_i_1 = -1 + ((r + n_col - 1) & 0x1);
+        assert(t_i_1 + t_st >= 0);
 
 #ifdef DEBUG
         // DEBUG:
@@ -603,7 +608,7 @@ void ksw_extd2_cpp(
 #endif
     }  // NOTE: output of the loop: Hmax, rmax, ez, p
 
-    // NOTE: find max for ez
+    // NOTE: find max for ez. When multiple entries has the same score, always chose the one with smaller r. 
     int max_r = -1;
     for (int t = 1; t <= n_col; ++t){
         if (Hmax[t] > (int32_t)ez->max || (Hmax[t] == (int32_t)ez->max && rmax[t] < max_r)) {
