@@ -241,7 +241,7 @@ int ksw_update_diag	(
     for (int t = 0; t < n_col + 2; ++t, ++t_i_1) {
         // access previous matrix
         int8_t sc_elt, prev_u, prev_v, prev_x, prev_y, prev_x2, prev_y2;
-        int32_t prev_H;
+        int32_t prev_H, prev_H_1;
         if (t >= t_st && t <= t_en){
             sc_elt = sc[t];           // s_{i,j}
             prev_u = u[t_i_1 + 1];    // u_{i,j+1}
@@ -250,7 +250,8 @@ int ksw_update_diag	(
             prev_y = y[t_i_1 + 1];    // y_{i,j-1}
             prev_x2 = x2[t_i_1];      // x2_{i-1,j}
             prev_y2 = y2[t_i_1 + 1];  // y2_{i,j-1}
-            prev_H = (t == t_en && r > 0) ? H[t_i_1] : H[t_i_1 + 1]; // H_{i-1,j}:H_{i,j-1}
+            prev_H_1 = H[t_i_1];      // H_{i-1,j}
+            prev_H = H[t_i_1 + 1];    // H_{i,j+1}
         }
 
         // update KZ matrix
@@ -320,8 +321,8 @@ int ksw_update_diag	(
         }
 
         /* Calculate H anyways: for GPU */
-        if (t == t_en && r > 0) { // special casting the last element
-            H_new = prev_H + (int32_t)u_new;
+        if (prev_H == KSW_NEG_INF) { // special casting the last element
+            H_new = prev_H_1 + (int32_t)u_new;
         } else {
             H_new = prev_H + (int32_t)v_new;
         }
