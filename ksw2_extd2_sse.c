@@ -22,6 +22,9 @@
 #endif
 #endif
 
+extern FILE *align_score_file;
+extern FILE *align_debug_file;
+
 #ifdef KSW_CPU_DISPATCH
 #ifdef __SSE4_1__
 void ksw_extd2_sse41(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
@@ -35,6 +38,15 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				   int8_t q, int8_t e, int8_t q2, int8_t e2, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez)
 #endif // ~KSW_CPU_DISPATCH
 {
+#ifdef DEBUG
+    if (!align_debug_file)
+        align_debug_file = fopen("debug/test_extd2_sse_debug.output", "w+");
+    fprintf(align_debug_file, "H: \n");
+
+	if (!align_score_file)
+        align_score_file = fopen("debug/test_extd2_sse_score.output", "w+");
+    fprintf(align_score_file, "p: \n");
+#endif
 #define __dp_code_block1 \
 	z = _mm_load_si128(&s[t]); \
 	xt1 = _mm_load_si128(&x[t]);                     /* xt1 <- x[r-1][t..t+15] */ \
@@ -382,10 +394,31 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				ez->score = H0;
 		}
 		last_st = st, last_en = en;
-		//for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for debugging
-	}
-	kfree(km, mem);
-	if (!approx_max) kfree(km, H);
+#ifdef DEBUG
+        fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st0, en0);
+        // for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for debugging
+        for (t = st0; t <= en0; ++t) {
+            fprintf(align_debug_file, "%d ", H[t]);
+        }
+        fprintf(align_debug_file, "\n");
+#endif  // DEBUG
+    } // r loop
+
+#ifdef DEBUG
+    int n_col = qlen < tlen ? qlen : tlen;
+    n_col = (n_col < w + 1 ? n_col : w + 1);
+    for (int i = 0; i < qlen + tlen - 1; i++) {
+        int len = i + 1 < qlen + tlen - i - 1 ? i + 1 : qlen + tlen - i - 1;
+        len = n_col < len ? n_col : len;
+        fprintf(align_score_file, "#%d ", i);
+        for (int j = 0; j < len; j++) {
+            fprintf(align_score_file, "%x ", ((uint8_t*)p)[i * n_col_*16 + j]);
+        }
+        fprintf(align_score_file, "\n");
+    }
+#endif // DEBUG
+    kfree(km, mem);
+    if (!approx_max) kfree(km, H);
 	if (with_cigar) { // backtrack
 		int rev_cigar = !!(flag & KSW_EZ_REV_CIGAR);
 		if (!ez->zdropped && !(flag&KSW_EZ_EXTZ_ONLY)) {
