@@ -395,10 +395,16 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		}
 		last_st = st, last_en = en;
 #ifdef DEBUG
-        fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st0, en0);
-        // for (t = st0; t <= en0; ++t) printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for debugging
-        for (t = st0; t <= en0; ++t) {
+        fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st, en0);
+        // for (t = st0; t <= en0; ++t)
+        // printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t],
+        // ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for
+        // debugging
+        for (t = st; t <= en; ++t) {
             fprintf(align_debug_file, "%d ", H[t]);
+            // fprintf(align_debug_file, "[%d %d v-1 %d s %d p %x]%d ", v8[t],
+                    // u8[t], v8[t - 1], ((int8_t *)s)[t],
+                    // ((uint8_t *)p)[r * n_col_ * 16 - st + t], H[t]);
         }
         fprintf(align_debug_file, "\n");
 #endif  // DEBUG
@@ -409,10 +415,14 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
     n_col = (n_col < w + 1 ? n_col : w + 1);
     for (int i = 0; i < qlen + tlen - 1; i++) {
         int len = i + 1 < qlen + tlen - i - 1 ? i + 1 : qlen + tlen - i - 1;
-        len = n_col < len ? n_col : len;
-        fprintf(align_score_file, "#%d ", i);
-        for (int j = 0; j < len; j++) {
-            fprintf(align_score_file, "%x ", ((uint8_t*)p)[i * n_col_*16 + j]);
+        len = w < len ? w : len;
+        int st = 0;
+        if (st < i - qlen + 1) st = i - qlen + 1;
+        if (st < (i - wr + 1) >> 1) st = (i - wr + 1) >> 1;  // take the ceil
+        fprintf(align_score_file, "#%d (%d) ", i, len, off[i] - st);
+        for (int j = st - off[i]; j < len + st - off[i]; j++) {
+            fprintf(align_score_file, "%x ",
+                    ((uint8_t *)p)[i * n_col_ * 16 + j]);
         }
         fprintf(align_score_file, "\n");
     }

@@ -264,11 +264,13 @@ int ksw_update_diag	(
             y2[t-1] = y2_new;
             H[t-1] = H_new;
 #ifdef DEBUG
-                // if (t >= t_st && t <= t_en+1)
-                //     fprintf(align_debug_file,
-                //             "t %d, s %d, u %d, v %d, x %d,  y %d, x2 %d, y2
-                //             %d H %d\n", t - 1, sc[t-1], u_new, v_new, x_new,
-                //             y_new, x2_new, y2_new, H_new);
+            if (r == 129){
+            //     if (t >= t_st && t <= t_en+1)
+                    // fprintf(align_debug_file,
+                    //         "t %d, s %d, u %d, v %d, x %d,  y %d, x2 %d, y2 %d H %d\n", 
+                    //         t - 1, sc[t-1], u_new, v_new, x_new,
+                    //         y_new, x2_new, y2_new, H_new);
+            }
 #endif
         }
 
@@ -333,7 +335,7 @@ int ksw_update_diag	(
             rmax[t] = r;
         }
 #ifdef DEBUG
-        // fprintf(align_debug_file, "%d|%d ", prev_H, H_new);
+        // fprintf(align_debug_file, "p %x ", p[t]);
 #endif
         }
     // update KZ matrix
@@ -577,22 +579,29 @@ void ksw_extd2_cpp(
         // DEBUG: debug output
 #ifdef DEBUG
         fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st, en);
+        // for (int t = get_t(st0, r, n_col); t <= get_t(en0, r, n_col); ++t) {
         for (int t = t_st; t <= t_en; ++t) {
         //     if (!align_debug_file) {
         //         align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         //     }
             fprintf(align_debug_file, "%d ", H[t]);
-        //     fprintf(align_debug_file, "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
-        //             r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t *)v)[t],
+        // fprintf(align_debug_file, "[%d %d v-1 %d s %d]%d ", v[t], u[t], v[t-1], sc[t], H[t]);
+        //     fprintf(align_debug_file,
+        //     "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
+        //             r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t
+        //             *)v)[t],
         //             ((int8_t *)x)[t], ((int8_t *)y)[t], ((int8_t *)x2)[t],
-        //             ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t *)Hmax)[t],
-        //             ((int *)rmax)[t], p[r*min_n_col - t_st + t]);  // for debugging
+        //             ((int8_t *)y2)[t], ((int32_t *)H)[t], ((int32_t
+        //             *)Hmax)[t],
+        //             ((int *)rmax)[t], p[r*min_n_col - t_st + t]);  // for
+        //             debugging
         //     if (!align_score_file) {
-        //         align_score_file = fopen("debug/test_sample_score.output", "w+");
-        //         fprintf(align_score_file, "(r, t | u, v, x, y)\n");
+        //         align_score_file = fopen("debug/test_sample_score.output",
+        //         "w+"); fprintf(align_score_file, "(r, t | u, v, x, y)\n");
         //     }
-        //     fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)", 
-        //         r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t], ((int8_t*)x)[t], 
+        //     fprintf(align_score_file, "(%d,%d|%d,%d,%d,%d)",
+        //         r, t-t_st+st, ((int8_t*)u)[t], ((int8_t*)v)[t],
+        //         ((int8_t*)x)[t],
         //         ((int8_t*)y)[t]); // for debugging
         }
         // fprintf(align_score_file, "\n");
@@ -622,8 +631,8 @@ void ksw_extd2_cpp(
     //     ez->score);
     for (int i = 0; i < qlen + tlen - 1; i++) {
         int len = i + 1 < qlen + tlen - i - 1 ? i + 1 : qlen + tlen - i - 1;
-        len = min_n_col < len ? min_n_col : len;
-        fprintf(align_score_file, "#%d ", i);
+        len = w < len ? w : len;
+        fprintf(align_score_file, "#%d (%d) ", i, len);
         for (int j = 0; j < len; j++)
             fprintf(align_score_file, "%x ", ((uint8_t *)p)[i * min_n_col + j]);
         fprintf(align_score_file, "\n");
