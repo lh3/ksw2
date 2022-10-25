@@ -395,12 +395,12 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		}
 		last_st = st, last_en = en;
 #ifdef DEBUG
-        fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st, en0);
+        fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st0, en0);
         // for (t = st0; t <= en0; ++t)
         // printf("(%d,%d)\t(%d,%d,%d,%d)\t%d\n", r, t, ((int8_t*)u)[t],
         // ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for
         // debugging
-        for (t = st; t <= en; ++t) {
+        for (t = st0; t <= en0; ++t) {
             fprintf(align_debug_file, "%d ", H[t]);
             // fprintf(align_debug_file, "[%d %d v-1 %d s %d p %x]%d ", v8[t],
                     // u8[t], v8[t - 1], ((int8_t *)s)[t],
