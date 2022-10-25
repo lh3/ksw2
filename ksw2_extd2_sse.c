@@ -158,13 +158,21 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		st0 = st, en0 = en;
 		st = st / 16 * 16, en = (en + 16) / 16 * 16 - 1;
 		// set boundary conditions
-		if (st > 0) {
-			if (st - 1 >= last_st && st - 1 <= last_en) {
-				x1 = x8[st - 1], x21 = x28[st - 1], v1 = v8[st - 1]; // (r-1,s-1) calculated in the last round
-			} else {
+		if (st0 > 0) {
+			if (st0 - 1 >= last_st && st0 - 1 <= last_en) {
+				if (r == 160)
+                    printf("this is r == 160, last_st = %d, st0 = %d\n",
+                           last_st, st0);
+                x1 = x8[st0 - 1], x21 = x28[st0 - 1],
+                v1 = v8[st0 - 1];  // (r-1,s-1) calculated in the last round
+            } else {
 				x1 = -q - e, x21 = -q2 - e2;
-				v1 = -q - e;
-			}
+                // v1 = -q - e;
+                v1 = r == 0            ? -q - e
+                     : r < long_thres  ? -e
+                     : r == long_thres ? long_diff
+                                       : -e2;
+            }
 		} else {
 			x1 = -q - e, x21 = -q2 - e2;
 			v1 = r == 0? -q - e : r < long_thres? -e : r == long_thres? long_diff : -e2;
@@ -393,7 +401,7 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 			if (r == qlen + tlen - 2 && en0 == tlen - 1)
 				ez->score = H0;
 		}
-		last_st = st, last_en = en;
+		last_st = st0, last_en = en0;
 #ifdef DEBUG
         fprintf(align_debug_file, "#%d (st=%d en=%d) ", r, st0, en0);
         // for (t = st0; t <= en0; ++t)
@@ -401,10 +409,10 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
         // ((int8_t*)v)[t], ((int8_t*)x)[t], ((int8_t*)y)[t], H[t]); // for
         // debugging
         for (t = st0; t <= en0; ++t) {
-            fprintf(align_debug_file, "%d ", H[t]);
-            // fprintf(align_debug_file, "[%d %d v-1 %d s %d p %x]%d ", v8[t],
-                    // u8[t], v8[t - 1], ((int8_t *)s)[t],
-                    // ((uint8_t *)p)[r * n_col_ * 16 - st + t], H[t]);
+            // fprintf(align_debug_file, "%d ", H[t]);
+            fprintf(align_debug_file, "[%d %d v1 %d s %d p %x]%d ", v8[t],
+                    u8[t], v1, ((int8_t *)s)[t],
+                    ((uint8_t *)p)[r * n_col_ * 16 - st + t], H[t]);
         }
         fprintf(align_debug_file, "\n");
 #endif  // DEBUG

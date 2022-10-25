@@ -584,8 +584,8 @@ void ksw_extd2_cpp(
         //     if (!align_debug_file) {
         //         align_debug_file = fopen("debug/test_sample_debug.output", "w+");
         //     }
-            fprintf(align_debug_file, "%d ", H[t]);
-        // fprintf(align_debug_file, "[%d %d v-1 %d s %d]%d ", v[t], u[t], v[t-1], sc[t], H[t]);
+        // fprintf(align_debug_file, "%d ", H[t]);
+        fprintf(align_debug_file, "[%d %d v-1 %d s %d]%d ", v[t], u[t], v[t-1], sc[t], H[t]);
         //     fprintf(align_debug_file,
         //     "(%d,%d,%d|%d,%d,%d,%d,%d,%d,%d,%d,%d,0x%x)\n",
         //             r, t, get_i(t, r, n_col), ((int8_t *)u)[t], ((int8_t
