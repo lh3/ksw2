@@ -16,7 +16,7 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 	if (w < 0) w = tlen > qlen? tlen : qlen;
 	n_col = w + 1 < tlen? w + 1 : tlen;
 	if (m_cigar_ && n_cigar_ && cigar_) {
-		p = (uint8_t*)kcalloc(km, (qlen + tlen) * n_col, 1);
+		p = (uint8_t*)kcalloc(km, (size_t)(qlen + tlen) * n_col, 1);
 		off = (int*)kmalloc(km, (qlen + tlen) * sizeof(int));
 	}
 
@@ -44,7 +44,7 @@ int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *t
 			s[t] = mat[target[t] * m + qr[t + qlen - 1 - r]];
 		// core loop
 		if (m_cigar_ && n_cigar_ && cigar_) {
-			uint8_t *pr = p + r * n_col;
+			uint8_t *pr = p + (size_t)r * n_col;
 			off[r] = st;
 			for (t = st; t <= en; ++t) {
 				/* At the beginning of the loop, v1=v(r-1,t-1), x1=x(r-1,t-1), u[t]=u(r-1,t), v[t]=v(r-1,t), x[t]=x(r-1,t), y[t]=y(r-1,t)
